@@ -1,0 +1,8 @@
+[submodule "Assets/SabeCSG"]
+	path = Assets/SabeCSG
+	url = https://github.com/sabresaurus/SabreCSG.git
+	branch = master
+[submodule "Assets/vncLib"]
+	path = Assets/vncLib
+	url = https://github.com/vncastanheira/vnc-Library.git
+	branch = master
