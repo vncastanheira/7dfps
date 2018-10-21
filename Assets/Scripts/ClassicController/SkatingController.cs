@@ -1,4 +1,5 @@
 ﻿#define CLASSIC
+#define RIGIDBODY
 
 using System.Collections;
 using System.Collections.Generic;
@@ -8,9 +9,12 @@ using vnc.Utilities;
 
 namespace Assets.Controller
 {
-    public class SkatingController : MonoBehaviour
+    public partial class SkatingController : MonoBehaviour
     {
         [Header("Settings")]
+#if RIGIDBODY
+        public Rigidbody body;
+#endif
         public SkatingControllerSettings m_Settings;
         [Space]
         public CapsuleCollider ownCollider;
@@ -37,13 +41,17 @@ namespace Assets.Controller
             FacingDirection = transform.forward;
             FowardForce = 0f;
             wishDir = Vector3.zero;
+            m_MouseLook.Init(m_Head.transform, m_View.transform);
         }
 
         void Update()
         {
-            FacingDirection = transform.forward;
+            m_MouseLook.SetCursorLock(true);
+            m_MouseLook.LookRotation(m_Head, m_View.transform);
+            m_MouseLook.UpdateCursorLock();
 
             // get input
+            FacingDirection = transform.forward;
             FowardInput = (Input.GetButton("Forward") ? 1 : 0) - (Input.GetButton("Backwards") ? 1 : 0);
             float yaw = (Input.GetButton("Right") ? 1 : 0) - (Input.GetButton("Left") ? 1 : 0);
             wishDir = FowardInput * transform.TransformDirection(Vector3.forward);
@@ -53,17 +61,164 @@ namespace Assets.Controller
 
         private void FixedUpdate()
         {
-            Velocity = MoveGround(wishDir, Velocity);
-            // rotate to face velocity direction
+
+#if RIGIDBODY
+            Turning(FowardInput);
             transform.rotation = Quaternion.LookRotation(FacingDirection, transform.up);
 
+            Ray floorRay = new Ray(transform.position, Vector3.down * ownCollider.height);
+            RaycastHit hit;
+            if (Physics.Raycast(floorRay, out hit, Mathf.Infinity, m_SolidLayer))
+            {
+                wishDir = Vector3.ProjectOnPlane(wishDir, hit.normal);
+                body.AddForce(wishDir * 10, ForceMode.Acceleration);
+            }
+
+#else
+            if (EnumExtensions.HasFlag(Collisions, CC_Collision.CollisionBelow))
+            {
+                Ray floorRay = new Ray(transform.position, Vector3.down * ownCollider.height);
+                RaycastHit hit;
+                if (Physics.Raycast(floorRay, out hit, Mathf.Infinity, m_SolidLayer))
+                {
+                    wishDir = Vector3.ProjectOnPlane(wishDir, hit.normal);
+                }
+                Velocity = MoveGround(wishDir, Velocity);
+            }
+            else
+            {
+                Velocity = MoveAir(wishDir, Velocity);
+            }
+
+            // rotate to face velocity direction
+            transform.rotation = Quaternion.LookRotation(FacingDirection, transform.up);
             CalculateGravity();
 #if CLASSIC
             CharacterMove(Velocity);
 #else
-            CharacterMove((transform.forward * FowardForce) + Vector3.down * GravityMag);
+            CharacterMove((transform.forward * FowardForce) + Vector3.down * GravityMag);   
+#endif
 #endif
         }
+
+        private Vector3 MoveGround(Vector3 wishdir, Vector3 prevVelocity)
+        {
+#if CLASSIC
+
+            prevVelocity = Friction(prevVelocity, m_Settings.m_groundFriction);
+
+            if (FowardInput > 0)
+                Turning(FowardInput);
+
+            if (EnumExtensions.HasFlag(Collisions, CC_Collision.CollisionBelow))
+                prevVelocity = Accelerate(wishdir, prevVelocity, m_Settings.m_acceleration, m_Settings.m_maxSpeed);
+
+
+            return prevVelocity;
+#else
+
+            Friction(m_Settings.m_friction);
+            Turning(fwd);
+            Accelerate(m_Settings.m_acceleration, fwd);
+#endif
+        }
+
+        private Vector3 MoveAir(Vector3 wishDir, Vector3 prevVelocity)
+        {
+            prevVelocity = Friction(prevVelocity, m_Settings.m_airFriction);
+            prevVelocity = Accelerate(wishDir, prevVelocity, m_Settings.m_acceleration, m_Settings.m_maxSpeed);
+            return prevVelocity;
+        }
+
+        float projVel;
+        private Vector3 Accelerate(Vector3 wishdir, Vector3 prevVelocity, float accelerate, float max_velocity)
+        {
+            projVel = Vector3.Dot(prevVelocity, wishdir);
+            float accelSpeed = accelerate * 0.05f;
+
+            if (projVel + accelSpeed > max_velocity)
+                accelSpeed = max_velocity - projVel;
+
+            Vector3 newVel = prevVelocity + wishdir * accelSpeed;
+            return newVel;
+        }
+
+        private Vector3 Friction(Vector3 prevVelocity, float friction)
+        {
+            var wishspeed = prevVelocity;
+
+            float speed = wishspeed.magnitude;
+            // Apply Friction
+            if (speed != 0) // To avoid divide by zero errors
+            {
+                float control = speed < m_Settings.m_stopspeed ? m_Settings.m_stopspeed : speed;
+                // Quake 3 code I guess
+                float drop = control * friction * Time.fixedDeltaTime;
+
+                // hack to make the speed jump from a smaller value
+                //speed = speed < min_speed ? min_speed : speed;
+
+                wishspeed *= Mathf.Max(speed - drop, 0) / speed; // Scale the velocity based on friction.
+            }
+            return wishspeed;
+        }
+
+        //void Accelerate(float accelerate, float foward)
+        //{
+        //    projVel = Vector3.Dot(FacingDirection, wishDir);
+        //    FowardForce = Mathf.Clamp(FowardForce + accelerate * projVel, 0f, m_Settings.m_maxSpeed);
+        //}
+
+        //void Friction(float friction)
+        //{
+        //    float speed = FowardForce;
+        //    if (speed != 0)
+        //    {
+        //        float control = speed < m_Settings.m_stopspeed ? m_Settings.m_stopspeed : speed;
+        //        // Quake 3 code I guess
+        //        float drop = control * friction * Time.fixedDeltaTime;
+        //        FowardForce *= Mathf.Max(speed - drop, 0) / speed;
+        //    }
+        //}
+
+        void Turning(float foward)
+        {
+            Vector3 copy = wishDir;
+            copy.y = 0;
+            FacingDirection += copy * m_Settings.m_turningSpeed * Mathf.Abs(foward);
+            FacingDirection.Normalize();
+        }
+
+#if !RIGIDBODY
+        void CalculateGravity()
+        {
+#if CLASSIC
+            Velocity += (Vector3.down * m_Settings.m_gravity) * Time.fixedDeltaTime;
+#else
+
+            if (EnumExtensions.HasFlag(Collisions, CC_Collision.CollisionBelow))
+                GravityMag = m_Settings.m_gravity;
+            else
+            {
+                GravityMag += m_Settings.m_gravity * Time.fixedDeltaTime;
+            }
+#endif
+        }
+#endif
+
+        void FloorAlign()
+        {
+            if (EnumExtensions.HasFlag(Collisions, CC_Collision.CollisionBelow))
+            {
+                Ray floorRay = new Ray(transform.position, Vector3.down * ownCollider.height);
+                RaycastHit hit;
+                if (Physics.Raycast(floorRay, out hit, Mathf.Infinity, m_SolidLayer))
+                {
+                    transform.rotation = Quaternion.LookRotation(transform.forward, hit.normal);
+                }
+            }
+        }
+
 
         /// <summary>
         /// Move the character without going through things
@@ -139,103 +294,22 @@ namespace Assets.Controller
 
             }
 
+            Vector3 resultNormal = Vector3.zero;
             for (int n = 0; n < nHits; n++)
             {
                 // handles collision
                 OnCCHit(hitNormals[n]);
+                resultNormal += hitNormals[n];
             }
+
+            // align with planes
+            var copyVelocity = Velocity;
+            var newDir = Vector3.ProjectOnPlane(copyVelocity.normalized, resultNormal.normalized);
+            Velocity = (newDir * copyVelocity.magnitude);
+
+            //FloorAlign();
         }
 
-        private Vector3 MoveGround(Vector3 wishdir, Vector3 prevVelocity)
-        {
-#if CLASSIC
-
-            prevVelocity = Friction(prevVelocity, m_Settings.m_friction);
-
-            if (FowardInput > 0)
-                Turning(FowardInput);
-
-            prevVelocity = Accelerate(wishdir, prevVelocity, m_Settings.m_acceleration, m_Settings.m_maxSpeed);
-            return prevVelocity;
-#else
-
-            Friction(m_Settings.m_friction);
-            Turning(fwd);
-            Accelerate(m_Settings.m_acceleration, fwd);
-#endif
-        }
-
-        float projVel;
-        private Vector3 Accelerate(Vector3 wishdir, Vector3 prevVelocity, float accelerate, float max_velocity)
-        {
-            projVel = Vector3.Dot(prevVelocity, wishdir);
-            float accelSpeed = accelerate * 0.05f;
-
-            if (projVel + accelSpeed > max_velocity)
-                accelSpeed = max_velocity - projVel;
-
-            Vector3 newVel = prevVelocity + wishdir * accelSpeed;
-            return newVel;
-        }
-
-        private Vector3 Friction(Vector3 prevVelocity, float friction)
-        {
-            var wishspeed = prevVelocity;
-
-            float speed = wishspeed.magnitude;
-            // Apply Friction
-            if (speed != 0) // To avoid divide by zero errors
-            {
-                float control = speed < m_Settings.m_stopspeed ? m_Settings.m_stopspeed : speed;
-                // Quake 3 code I guess
-                float drop = control * friction * Time.fixedDeltaTime;
-
-                // hack to make the speed jump from a smaller value
-                //speed = speed < min_speed ? min_speed : speed;
-
-                wishspeed *= Mathf.Max(speed - drop, 0) / speed; // Scale the velocity based on friction.
-            }
-            return wishspeed;
-        }
-
-        //void Accelerate(float accelerate, float foward)
-        //{
-        //    projVel = Vector3.Dot(FacingDirection, wishDir);
-        //    FowardForce = Mathf.Clamp(FowardForce + accelerate * projVel, 0f, m_Settings.m_maxSpeed);
-        //}
-
-        //void Friction(float friction)
-        //{
-        //    float speed = FowardForce;
-        //    if (speed != 0)
-        //    {
-        //        float control = speed < m_Settings.m_stopspeed ? m_Settings.m_stopspeed : speed;
-        //        // Quake 3 code I guess
-        //        float drop = control * friction * Time.fixedDeltaTime;
-        //        FowardForce *= Mathf.Max(speed - drop, 0) / speed;
-        //    }
-        //}
-
-        void Turning(float foward)
-        {
-            FacingDirection += wishDir * m_Settings.m_turningSpeed * Mathf.Abs(foward);
-            FacingDirection.Normalize();
-        }
-
-        void CalculateGravity()
-        {
-#if CLASSIC
-            Velocity += (Vector3.down * m_Settings.m_gravity) * Time.fixedDeltaTime;
-#else
-
-            if (EnumExtensions.HasFlag(Collisions, CC_Collision.CollisionBelow))
-                GravityMag = m_Settings.m_gravity;
-            else
-            {
-                GravityMag += m_Settings.m_gravity * Time.fixedDeltaTime;
-            }
-#endif
-        }
 
         Vector3[] hitNormals = new Vector3[16];
         private void OnCCHit(Vector3 normal)
@@ -247,19 +321,15 @@ namespace Assets.Controller
 
             if ((Collisions & CC_Collision.CollisionSides) != 0)
             {
-                var copyVelocity = Velocity;
-                copyVelocity += normal * m_Settings.m_wallBounce;
-                copyVelocity.y = 0;
+                //var copyVelocity = Velocity;
+                //copyVelocity.y = 0;
                 //var newDir = Vector3.ProjectOnPlane(copyVelocity.normalized, normal);
                 //Velocity.x = (newDir * copyVelocity.magnitude).x;
                 //Velocity.z = (newDir * copyVelocity.magnitude).z;
-
-                Velocity.x = copyVelocity.x;
-                Velocity.z = copyVelocity.z;
             }
         }
 
-        #region Physics
+#region Physics
         /// <summary>
         /// Move the transform trying to stop being overlaping other colliders
         /// </summary>
@@ -328,19 +398,26 @@ namespace Assets.Controller
             return position;
         }
 
-        #endregion
+#endregion
 
 #if UNITY_EDITOR
-        #region Editor
+#region Editor
         private void OnDrawGizmos()
         {
             Vector3 xzPlane = FacingDirection;
             xzPlane.y = 0;
 
-            if (xzPlane != Vector3.zero)
+            Vector3 vel;
+#if RIGIDBODY
+            vel = body.velocity;
+#else
+            vel = Velocity;
+#endif
+
+            if (Velocity != Vector3.zero)
             {
-                Handles.color = Color.white;
-                Handles.ArrowHandleCap(0, transform.position, Quaternion.LookRotation(xzPlane), 2, EventType.Repaint);
+                Handles.color = Color.blue;
+                Handles.ArrowHandleCap(0, transform.position, Quaternion.LookRotation(vel), 2, EventType.Repaint);
             }
 
             if (wishDir != Vector3.zero)
@@ -363,7 +440,7 @@ namespace Assets.Controller
 
             GUI.Label(rect, gui);
         }
-        #endregion
+#endregion
 #endif
     }
 }
