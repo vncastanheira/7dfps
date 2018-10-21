@@ -47,7 +47,8 @@ namespace Assets.Controller
             FowardInput = (Input.GetButton("Forward") ? 1 : 0) - (Input.GetButton("Backwards") ? 1 : 0);
             float yaw = (Input.GetButton("Right") ? 1 : 0) - (Input.GetButton("Left") ? 1 : 0);
             wishDir = FowardInput * transform.TransformDirection(Vector3.forward);
-            wishDir = Quaternion.Euler(0, 90 * yaw, 0) * wishDir;  
+            if (FowardInput > 0)
+                wishDir = Quaternion.Euler(0, 90 * yaw, 0) * wishDir;
         }
 
         private void FixedUpdate()
@@ -75,7 +76,7 @@ namespace Assets.Controller
             // reset all collision flags
             Collisions = CC_Collision.None;
 
-            Vector3 movNormalized = movement.normalized;
+            Vector3 totalMovNorm = movement.normalized;
             float distance = movement.magnitude;
 
 #if STAIRS
@@ -87,27 +88,62 @@ namespace Assets.Controller
             //float stepDistance = Math.Min((ownCollider as CapsuleCollider).radius, minimumStepDistance);
             float stepDistance = 0.05f;
 
-            Vector3 nResult;
-            if (distance > 0)
+            int nHits = 0;
+
+            for (int i = 0; i < 3; i++)
             {
-                for (float curDist = 0; curDist < distance; curDist += stepDistance)
+                Vector3 movNormalized = Vector3.zero;
+                switch (i)
                 {
-                    float curMagnitude = Mathf.Min(stepDistance, distance - curDist);
-                    Vector3 start = transform.position;
-                    Vector3 end = start + movNormalized * curMagnitude;
-                    transform.position = FixOverlaps(end, movNormalized * curMagnitude, out nResult);
-                    nTotal += nResult;
+                    case 0:
+                        movNormalized = Vector3.right;
+                        break;
+                    case 1:
+                        movNormalized = Vector3.up;
+                        break;
+                    case 2:
+                        movNormalized = Vector3.forward;
+                        break;
                 }
-            }
-            else
-            {
-                // when character doesn't move
-                transform.position = FixOverlaps(transform.position, Vector3.zero, out nResult);
-                nTotal += nResult;
+                movNormalized *= totalMovNorm[i];
+
+                Vector3 normal;
+                if (distance > 0)
+                {
+                    for (float curDist = 0; curDist < distance; curDist += stepDistance)
+                    {
+                        float curMagnitude = Mathf.Min(stepDistance, distance - curDist);
+                        Vector3 start = transform.position;
+                        Vector3 end = start + movNormalized * curMagnitude;
+                        transform.position = FixOverlaps(end, movNormalized * curMagnitude, out normal);
+
+                        if (nHits < hitNormals.Length)
+                        {
+                            hitNormals[nHits] = normal;
+                            nHits++;
+                        }
+                    }
+                }
+                else
+                {
+                    // when character doesn't move
+                    transform.position = FixOverlaps(transform.position, Vector3.zero, out normal);
+
+                    if (nHits < hitNormals.Length)
+                    {
+                        hitNormals[nHits] = normal;
+                        nHits++;
+                    }
+                }
+
+
             }
 
-            // handles collision
-            OnCCHit(nTotal.normalized);
+            for (int n = 0; n < nHits; n++)
+            {
+                // handles collision
+                OnCCHit(hitNormals[n]);
+            }
         }
 
         private Vector3 MoveGround(Vector3 wishdir, Vector3 prevVelocity)
@@ -115,7 +151,10 @@ namespace Assets.Controller
 #if CLASSIC
 
             prevVelocity = Friction(prevVelocity, m_Settings.m_friction);
-            Turning(FowardInput);
+
+            if (FowardInput > 0)
+                Turning(FowardInput);
+
             prevVelocity = Accelerate(wishdir, prevVelocity, m_Settings.m_acceleration, m_Settings.m_maxSpeed);
             return prevVelocity;
 #else
@@ -198,6 +237,7 @@ namespace Assets.Controller
 #endif
         }
 
+        Vector3[] hitNormals = new Vector3[16];
         private void OnCCHit(Vector3 normal)
         {
             if ((Collisions & CC_Collision.CollisionAbove) != 0 && Velocity.y > 0)
@@ -207,12 +247,15 @@ namespace Assets.Controller
 
             if ((Collisions & CC_Collision.CollisionSides) != 0)
             {
-                //WallFriction(normal);
                 var copyVelocity = Velocity;
+                copyVelocity += normal * m_Settings.m_wallBounce;
                 copyVelocity.y = 0;
-                var newDir = Vector3.ProjectOnPlane(copyVelocity.normalized, normal);
-                Velocity.x = (newDir * copyVelocity.magnitude).x;
-                Velocity.z = (newDir * copyVelocity.magnitude).z;
+                //var newDir = Vector3.ProjectOnPlane(copyVelocity.normalized, normal);
+                //Velocity.x = (newDir * copyVelocity.magnitude).x;
+                //Velocity.z = (newDir * copyVelocity.magnitude).z;
+
+                Velocity.x = copyVelocity.x;
+                Velocity.z = copyVelocity.z;
             }
         }
 
@@ -313,7 +356,7 @@ namespace Assets.Controller
             string gui = string.Format("Facing Direction: {0}\n", FacingDirection)
                 + string.Format("Foward Force: {0}\n", FowardForce)
                  + string.Format("Velocity: {0}\n", Velocity)
-                 +string.Format("Is Grounded: {0}\n", (Collisions & CC_Collision.CollisionBelow))
+                 + string.Format("Is Grounded: {0}\n", (Collisions & CC_Collision.CollisionBelow))
                 + string.Format("WishDir: {0}\n", wishDir)
                 + string.Format("projVel: {0}\n", projVel);
 
