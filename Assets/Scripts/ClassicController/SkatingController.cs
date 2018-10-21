@@ -65,22 +65,22 @@ namespace Assets.Controller
 
 #if RIGIDBODY
             Turning();
-            //transform.rotation = Quaternion.LookRotation(FacingDirection, transform.up);
-            body.MoveRotation(Quaternion.LookRotation(FacingDirection, transform.up));
 
-            Ray floorRay = new Ray(transform.position, Vector3.down);
             RaycastHit hit;
-            if (Physics.Raycast(floorRay, out hit, (ownCollider.height / 2f + 0.1f), m_SolidLayer))
+            if (GetFloor(out hit))
             {
                 wishDir = Vector3.ProjectOnPlane(wishDir, hit.normal);
                 body.AddForce(FacingDirection * FowardInput * m_Settings.m_acceleration, ForceMode.Acceleration);
+                FloorAlign(hit.normal);
+
                 debugOnGround = true;
             }
             else
             {
+                FloorAlign(Vector3.up);
+
                 debugOnGround = false;
             }
-
 #else
             if (EnumExtensions.HasFlag(Collisions, CC_Collision.CollisionBelow))
             {
@@ -106,6 +106,37 @@ namespace Assets.Controller
             CharacterMove((transform.forward * FowardForce) + Vector3.down * GravityMag);   
 #endif
 #endif
+        }
+
+        bool GetFloor(out RaycastHit hit)
+        {
+            Vector3 point0, point1, offset;
+            float radius, distance;
+
+            //PhysicsExtensions.CapsuleCastOffset(ownCollider, -transform.up, out hit, transform.up,
+            //    (ownCollider.height * 2), m_SolidLayer);
+
+            offset = transform.up;
+
+            ownCollider.ToWorldSpaceCapsule(out point0, out point1, out radius);
+            point0 += offset;
+            point1 += offset;
+
+            radius -= 0.1f;
+            distance = ownCollider.height + 0.1f;
+
+            return Physics.CapsuleCast(point0, point1, radius, -transform.up, out hit, distance, m_SolidLayer);
+        }
+
+        void FloorAlign(Vector3 up)
+        {
+            Quaternion targetRot;
+            // align the rotation
+            targetRot = Quaternion.LookRotation(FacingDirection, up);
+            // smooth interpolation
+            targetRot = Quaternion.Slerp(transform.rotation, targetRot, 0.1f);
+
+            body.MoveRotation(targetRot);
         }
 
         private Vector3 MoveGround(Vector3 wishdir, Vector3 prevVelocity)
@@ -194,6 +225,9 @@ namespace Assets.Controller
             copy.y = 0;
             FacingDirection += copy * m_Settings.m_turningSpeed;
             FacingDirection.Normalize();
+
+            // rotate sideways
+            transform.rotation = Quaternion.LookRotation(FacingDirection, transform.up);
         }
 
 #if !RIGIDBODY
@@ -213,18 +247,7 @@ namespace Assets.Controller
         }
 #endif
 
-        void FloorAlign()
-        {
-            if (EnumExtensions.HasFlag(Collisions, CC_Collision.CollisionBelow))
-            {
-                Ray floorRay = new Ray(transform.position, Vector3.down * ownCollider.height);
-                RaycastHit hit;
-                if (Physics.Raycast(floorRay, out hit, Mathf.Infinity, m_SolidLayer))
-                {
-                    transform.rotation = Quaternion.LookRotation(transform.forward, hit.normal);
-                }
-            }
-        }
+
 
 
         /// <summary>
@@ -336,7 +359,7 @@ namespace Assets.Controller
             }
         }
 
-#region Physics
+        #region Physics
         /// <summary>
         /// Move the transform trying to stop being overlaping other colliders
         /// </summary>
@@ -405,10 +428,10 @@ namespace Assets.Controller
             return position;
         }
 
-#endregion
+        #endregion
 
 #if UNITY_EDITOR
-#region Editor
+        #region Editor
         private void OnDrawGizmos()
         {
             Vector3 xzPlane = FacingDirection;
@@ -447,7 +470,7 @@ namespace Assets.Controller
 
             GUI.Label(rect, gui);
         }
-#endregion
+        #endregion
 #endif
     }
 }
