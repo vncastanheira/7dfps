@@ -29,6 +29,7 @@ namespace Assets.Controller
 
 
         // etc
+        private bool debugOnGround;
         private float FowardInput;
         [HideInInspector] public bool IsAlive = true;
         [HideInInspector] public CC_Collision Collisions;
@@ -54,8 +55,8 @@ namespace Assets.Controller
             FacingDirection = transform.forward;
             FowardInput = (Input.GetButton("Forward") ? 1 : 0) - (Input.GetButton("Backwards") ? 1 : 0);
             float yaw = (Input.GetButton("Right") ? 1 : 0) - (Input.GetButton("Left") ? 1 : 0);
-            wishDir = FowardInput * transform.TransformDirection(Vector3.forward);
-            if (FowardInput > 0)
+            wishDir = transform.TransformDirection(Vector3.forward);
+            if (FowardInput >= 0)
                 wishDir = Quaternion.Euler(0, 90 * yaw, 0) * wishDir;
         }
 
@@ -63,15 +64,21 @@ namespace Assets.Controller
         {
 
 #if RIGIDBODY
-            Turning(FowardInput);
-            transform.rotation = Quaternion.LookRotation(FacingDirection, transform.up);
+            Turning();
+            //transform.rotation = Quaternion.LookRotation(FacingDirection, transform.up);
+            body.MoveRotation(Quaternion.LookRotation(FacingDirection, transform.up));
 
-            Ray floorRay = new Ray(transform.position, Vector3.down * ownCollider.height);
+            Ray floorRay = new Ray(transform.position, Vector3.down);
             RaycastHit hit;
-            if (Physics.Raycast(floorRay, out hit, Mathf.Infinity, m_SolidLayer))
+            if (Physics.Raycast(floorRay, out hit, (ownCollider.height / 2f + 0.1f), m_SolidLayer))
             {
                 wishDir = Vector3.ProjectOnPlane(wishDir, hit.normal);
-                body.AddForce(wishDir * 10, ForceMode.Acceleration);
+                body.AddForce(FacingDirection * FowardInput * m_Settings.m_acceleration, ForceMode.Acceleration);
+                debugOnGround = true;
+            }
+            else
+            {
+                debugOnGround = false;
             }
 
 #else
@@ -108,7 +115,7 @@ namespace Assets.Controller
             prevVelocity = Friction(prevVelocity, m_Settings.m_groundFriction);
 
             if (FowardInput > 0)
-                Turning(FowardInput);
+                Turning();
 
             if (EnumExtensions.HasFlag(Collisions, CC_Collision.CollisionBelow))
                 prevVelocity = Accelerate(wishdir, prevVelocity, m_Settings.m_acceleration, m_Settings.m_maxSpeed);
@@ -181,11 +188,11 @@ namespace Assets.Controller
         //    }
         //}
 
-        void Turning(float foward)
+        void Turning()
         {
             Vector3 copy = wishDir;
             copy.y = 0;
-            FacingDirection += copy * m_Settings.m_turningSpeed * Mathf.Abs(foward);
+            FacingDirection += copy * m_Settings.m_turningSpeed;
             FacingDirection.Normalize();
         }
 
@@ -433,7 +440,7 @@ namespace Assets.Controller
             string gui = string.Format("Facing Direction: {0}\n", FacingDirection)
                 + string.Format("Foward Force: {0}\n", FowardForce)
                  + string.Format("Velocity: {0}\n", Velocity)
-                 + string.Format("Is Grounded: {0}\n", (Collisions & CC_Collision.CollisionBelow))
+                 + string.Format("Is Grounded: {0}\n", debugOnGround)
                 + string.Format("WishDir: {0}\n", wishDir)
                 + string.Format("projVel: {0}\n", projVel);
 
