@@ -12,11 +12,14 @@ MonoBehaviour:
   m_Name: Player Skating
   m_EditorClassIdentifier: 
   m_stopspeed: 0.0225
-  m_acceleration: 15
+  m_acceleration: 25
   m_maxSpeed: 10
   m_turningSpeed: 0.03
   m_groundFriction: 0.1
   m_airFriction: 0.01
   m_gravity: 0.1
   SlopeLimit: 0.2
+  m_planesDotAngleThreshold: 0.6
+  m_rotateSpeed: 8
+  m_groundDistance: 0.3
   m_wallBounce: 0.005

@@ -27,15 +27,19 @@ namespace Assets.Controller
         float FowardForce;
         Vector3 wishDir;
 
-
         // etc
-        private bool debugOnGround;
         private float FowardInput;
         [HideInInspector] public bool IsAlive = true;
         [HideInInspector] public CC_Collision Collisions;
         [HideInInspector] public CC_State State;
         private Collider[] overlapingColliders = new Collider[16];
         private const float Depenetration = 0.001f; // depenetration magic number for ComputePenetration
+
+        //debug
+        public GUISkin guiSkin;
+        private bool debugOnGround;
+        private Vector3 debugPlane;
+
 
         void Start()
         {
@@ -67,22 +71,24 @@ namespace Assets.Controller
             Turning();
 
             RaycastHit hit;
-            if (GetFloor(out hit))
+            if (GetGround(out hit))
             {
                 debugOnGround = true;
 
                 wishDir = Vector3.ProjectOnPlane(wishDir, hit.normal);
-                body.AddForce(FacingDirection * FowardInput * m_Settings.m_acceleration, ForceMode.Acceleration);
+                MoveGround();                
 
                 // align the controller with the plane if the angle isn't too high
                 if (Vector3.Dot(transform.up, hit.normal) > m_Settings.m_planesDotAngleThreshold)
-                    FloorAlign(hit.normal); 
+                    FloorAlign(hit.normal);
 
+                debugPlane = hit.normal;
             }
             else // in mid air
             {
                 debugOnGround = false;
 
+                MoveAir();
                 FloorAlign(Vector3.up);
             }
 #else
@@ -112,7 +118,7 @@ namespace Assets.Controller
 #endif
         }
 
-        bool GetFloor(out RaycastHit hit)
+        bool GetGround(out RaycastHit hit)
         {
             Vector3 point0, point1, offset;
             float radius, distance;
@@ -127,7 +133,7 @@ namespace Assets.Controller
             point1 += offset;
 
             radius -= 0.1f;
-            distance = ownCollider.height + 0.1f;
+            distance = ownCollider.height + m_Settings.m_groundDistance;
 
             return Physics.CapsuleCast(point0, point1, radius, -transform.up, out hit, distance, m_SolidLayer);
         }
@@ -136,74 +142,36 @@ namespace Assets.Controller
         {
             Quaternion targetRot;
             // align the rotation
-            targetRot = Quaternion.LookRotation(FacingDirection, up);
+            //targetRot = Quaternion.LookRotation(transform.forward, up);
+            targetRot = Quaternion.FromToRotation(transform.up, up) * transform.rotation;
             // smooth interpolation
-            targetRot = Quaternion.Slerp(transform.rotation, targetRot, 0.1f);
+            targetRot = Quaternion.Slerp(transform.rotation, targetRot, Time.fixedDeltaTime * m_Settings.m_rotateSpeed);
 
+            //transform.rotation = targetRot;
             body.MoveRotation(targetRot);
         }
 
-        private Vector3 MoveGround(Vector3 wishdir, Vector3 prevVelocity)
+        void Turning()
         {
-#if CLASSIC
+            Vector3 copy = wishDir;
+            copy.y = 0;
+            FacingDirection += copy * m_Settings.m_turningSpeed;
+            FacingDirection.Normalize();
 
-            prevVelocity = Friction(prevVelocity, m_Settings.m_groundFriction);
-
-            if (FowardInput > 0)
-                Turning();
-
-            if (EnumExtensions.HasFlag(Collisions, CC_Collision.CollisionBelow))
-                prevVelocity = Accelerate(wishdir, prevVelocity, m_Settings.m_acceleration, m_Settings.m_maxSpeed);
-
-
-            return prevVelocity;
-#else
-
-            Friction(m_Settings.m_friction);
-            Turning(fwd);
-            Accelerate(m_Settings.m_acceleration, fwd);
-#endif
+            // rotate sideways
+            transform.rotation = Quaternion.LookRotation(FacingDirection, transform.up);
         }
 
-        private Vector3 MoveAir(Vector3 wishDir, Vector3 prevVelocity)
+        void MoveGround()
         {
-            prevVelocity = Friction(prevVelocity, m_Settings.m_airFriction);
-            prevVelocity = Accelerate(wishDir, prevVelocity, m_Settings.m_acceleration, m_Settings.m_maxSpeed);
-            return prevVelocity;
+            body.AddForce(FacingDirection * FowardInput * m_Settings.m_acceleration, ForceMode.Acceleration);
         }
 
-        float projVel;
-        private Vector3 Accelerate(Vector3 wishdir, Vector3 prevVelocity, float accelerate, float max_velocity)
+        void MoveAir()
         {
-            projVel = Vector3.Dot(prevVelocity, wishdir);
-            float accelSpeed = accelerate * 0.05f;
-
-            if (projVel + accelSpeed > max_velocity)
-                accelSpeed = max_velocity - projVel;
-
-            Vector3 newVel = prevVelocity + wishdir * accelSpeed;
-            return newVel;
+            body.AddForce(FacingDirection * FowardInput * m_Settings.m_acceleration * m_Settings.m_airAccelerationFactor, ForceMode.Acceleration);
         }
 
-        private Vector3 Friction(Vector3 prevVelocity, float friction)
-        {
-            var wishspeed = prevVelocity;
-
-            float speed = wishspeed.magnitude;
-            // Apply Friction
-            if (speed != 0) // To avoid divide by zero errors
-            {
-                float control = speed < m_Settings.m_stopspeed ? m_Settings.m_stopspeed : speed;
-                // Quake 3 code I guess
-                float drop = control * friction * Time.fixedDeltaTime;
-
-                // hack to make the speed jump from a smaller value
-                //speed = speed < min_speed ? min_speed : speed;
-
-                wishspeed *= Mathf.Max(speed - drop, 0) / speed; // Scale the velocity based on friction.
-            }
-            return wishspeed;
-        }
 
         //void Accelerate(float accelerate, float foward)
         //{
@@ -223,16 +191,7 @@ namespace Assets.Controller
         //    }
         //}
 
-        void Turning()
-        {
-            Vector3 copy = wishDir;
-            copy.y = 0;
-            FacingDirection += copy * m_Settings.m_turningSpeed;
-            FacingDirection.Normalize();
 
-            // rotate sideways
-            transform.rotation = Quaternion.LookRotation(FacingDirection, transform.up);
-        }
 
 #if !RIGIDBODY
         void CalculateGravity()
@@ -252,7 +211,7 @@ namespace Assets.Controller
 #endif
 
 
-
+#if !RIGIDBODY
 
         /// <summary>
         /// Move the character without going through things
@@ -434,6 +393,8 @@ namespace Assets.Controller
 
         #endregion
 
+#endif
+
 #if UNITY_EDITOR
         #region Editor
         private void OnDrawGizmos()
@@ -448,16 +409,19 @@ namespace Assets.Controller
             vel = Velocity;
 #endif
 
-            if (Velocity != Vector3.zero)
-            {
-                Handles.color = Color.blue;
-                Handles.ArrowHandleCap(0, transform.position, Quaternion.LookRotation(vel), 2, EventType.Repaint);
-            }
+            Handles.color = Color.blue;
+            Handles.ArrowHandleCap(0, transform.position, Quaternion.LookRotation(FacingDirection), 2, EventType.Repaint);
 
             if (wishDir != Vector3.zero)
             {
                 Handles.color = Color.yellow;
                 Handles.ArrowHandleCap(0, transform.position, Quaternion.LookRotation(wishDir), 2, EventType.Repaint);
+            }
+
+            if (debugPlane != Vector3.zero)
+            {
+                Handles.color = Color.red;
+                Handles.ArrowHandleCap(0, transform.position, Quaternion.LookRotation(debugPlane), 2, EventType.Repaint);
             }
         }
 
@@ -468,11 +432,9 @@ namespace Assets.Controller
                 + string.Format("Foward Force: {0}\n", FowardForce)
                  + string.Format("Velocity: {0}\n", Velocity)
                  + string.Format("Is Grounded: {0}\n", debugOnGround)
-                + string.Format("WishDir: {0}\n", wishDir)
-                + string.Format("projVel: {0}\n", projVel);
+                + string.Format("WishDir: {0}\n", wishDir);
 
-
-            GUI.Label(rect, gui);
+            GUI.Label(rect, gui, guiSkin.label);
         }
         #endregion
 #endif
