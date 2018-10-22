@@ -15,6 +15,7 @@ namespace Assets.Controller
         public float m_airFriction = 0.01f;
         public float m_gravity = 0.09f;
         [Range(0.01f, 1f)] public float SlopeLimit = 0.8f;              // tolerance dot product before sliding
+        [Range(0.01f, 1f)] public float m_planesDotAngleThreshold = 0.7f;
 
         public float m_wallBounce = 2f; 
     }

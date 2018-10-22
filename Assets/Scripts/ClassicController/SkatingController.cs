@@ -69,17 +69,21 @@ namespace Assets.Controller
             RaycastHit hit;
             if (GetFloor(out hit))
             {
+                debugOnGround = true;
+
                 wishDir = Vector3.ProjectOnPlane(wishDir, hit.normal);
                 body.AddForce(FacingDirection * FowardInput * m_Settings.m_acceleration, ForceMode.Acceleration);
-                FloorAlign(hit.normal);
 
-                debugOnGround = true;
+                // align the controller with the plane if the angle isn't too high
+                if (Vector3.Dot(transform.up, hit.normal) > m_Settings.m_planesDotAngleThreshold)
+                    FloorAlign(hit.normal); 
+
             }
-            else
+            else // in mid air
             {
-                FloorAlign(Vector3.up);
-
                 debugOnGround = false;
+
+                FloorAlign(Vector3.up);
             }
 #else
             if (EnumExtensions.HasFlag(Collisions, CC_Collision.CollisionBelow))
