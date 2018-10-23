@@ -29,6 +29,10 @@ namespace Assets.Controller
 
         // etc
         private float FowardInput;
+        private bool isCrouching;
+        private bool JumpInput;
+        private bool RecoverInput;  // adjust the player rotation when it falls sideway on the floor 
+        [HideInInspector] public bool OnGround;
         [HideInInspector] public bool IsAlive = true;
         [HideInInspector] public CC_Collision Collisions;
         [HideInInspector] public CC_State State;
@@ -37,9 +41,7 @@ namespace Assets.Controller
 
         //debug
         public GUISkin guiSkin;
-        private bool debugOnGround;
         private Vector3 debugPlane;
-
 
         void Start()
         {
@@ -59,6 +61,14 @@ namespace Assets.Controller
             FacingDirection = transform.forward;
             FowardInput = (Input.GetButton("Forward") ? 1 : 0) - (Input.GetButton("Backwards") ? 1 : 0);
             float yaw = (Input.GetButton("Right") ? 1 : 0) - (Input.GetButton("Left") ? 1 : 0);
+            if (Input.GetButtonDown("Crouch"))
+                isCrouching = !isCrouching;
+
+            if (Input.GetButtonDown("Jump"))
+                JumpInput = true;
+
+            RecoverInput = Input.GetButtonDown("Recover");
+
             wishDir = transform.TransformDirection(Vector3.forward);
             if (FowardInput >= 0)
                 wishDir = Quaternion.Euler(0, 90 * yaw, 0) * wishDir;
@@ -66,31 +76,45 @@ namespace Assets.Controller
 
         private void FixedUpdate()
         {
+            body.mass = m_Settings.m_mass;
+            if (isCrouching)
+                body.drag = m_Settings.m_crouchingDrag; // less air resistance when crouching
+            else
+                body.drag = m_Settings.m_drag;
+
 
 #if RIGIDBODY
             Turning();
 
             RaycastHit hit;
-            if (GetGround(out hit))
+            OnGround = GetGround(out hit);
+            if (OnGround)
             {
-                debugOnGround = true;
 
                 wishDir = Vector3.ProjectOnPlane(wishDir, hit.normal);
-                MoveGround();                
+                MoveGround();
 
                 // align the controller with the plane if the angle isn't too high
-                if (Vector3.Dot(transform.up, hit.normal) > m_Settings.m_planesDotAngleThreshold)
+                debugFloorDot = Vector3.Dot(transform.up, hit.normal);
+                if (debugFloorDot > m_Settings.m_planesDotAngleThreshold)
                     FloorAlign(hit.normal);
+
+                if (JumpInput)
+                {
+                    body.AddForce(hit.normal * m_Settings.m_jumpImpulse, ForceMode.Impulse);
+                    JumpInput = false;
+                }
 
                 debugPlane = hit.normal;
             }
             else // in mid air
             {
-                debugOnGround = false;
-
                 MoveAir();
                 FloorAlign(Vector3.up);
             }
+
+            Crouch();
+            Recover();
 #else
             if (EnumExtensions.HasFlag(Collisions, CC_Collision.CollisionBelow))
             {
@@ -138,6 +162,7 @@ namespace Assets.Controller
             return Physics.CapsuleCast(point0, point1, radius, -transform.up, out hit, distance, m_SolidLayer);
         }
 
+        float debugFloorDot;
         void FloorAlign(Vector3 up)
         {
             Quaternion targetRot;
@@ -164,34 +189,72 @@ namespace Assets.Controller
 
         void MoveGround()
         {
-            body.AddForce(FacingDirection * FowardInput * m_Settings.m_acceleration, ForceMode.Acceleration);
+            float factor = 1f;
+
+            if (isCrouching)
+                factor = m_Settings.m_crouchingAccelerationFactor;
+
+            body.AddForce(FacingDirection * FowardInput * m_Settings.m_acceleration * factor, ForceMode.Acceleration);
         }
 
         void MoveAir()
         {
+            if (isCrouching)
+                return;
+
             body.AddForce(FacingDirection * FowardInput * m_Settings.m_acceleration * m_Settings.m_airAccelerationFactor, ForceMode.Acceleration);
         }
 
+        /// <summary>
+        /// Makes the controller crouch
+        /// </summary>
+        void Crouch()
+        {
+            RaycastHit hit;
+            Vector3 point0, point1;
+            float radius;
+            ownCollider.ToWorldSpaceCapsule(out point0, out point1, out radius);
+            radius -= 0.1f;
 
-        //void Accelerate(float accelerate, float foward)
-        //{
-        //    projVel = Vector3.Dot(FacingDirection, wishDir);
-        //    FowardForce = Mathf.Clamp(FowardForce + accelerate * projVel, 0f, m_Settings.m_maxSpeed);
-        //}
+            // detect when the player is under something and don't let it stand
+            if(Physics.CapsuleCast(point0, point1, radius, transform.up, out hit, ownCollider.height, m_SolidLayer)
+                && OnGround)
+            {
+                isCrouching = true;
+                return;
+            }
 
-        //void Friction(float friction)
-        //{
-        //    float speed = FowardForce;
-        //    if (speed != 0)
-        //    {
-        //        float control = speed < m_Settings.m_stopspeed ? m_Settings.m_stopspeed : speed;
-        //        // Quake 3 code I guess
-        //        float drop = control * friction * Time.fixedDeltaTime;
-        //        FowardForce *= Mathf.Max(speed - drop, 0) / speed;
-        //    }
-        //}
+            // adjust the collider size
 
+            float step = Time.deltaTime * 10;
+            Vector3 cameraPos = m_View.transform.localPosition;
+            if (isCrouching)
+            {
+                ownCollider.center = Vector3.Lerp(ownCollider.center, new Vector3(0f, -.5f, 0f), step);
+                ownCollider.height = Mathf.Lerp(ownCollider.height, 1, step);
 
+                cameraPos.y = -0.8f;
+            }
+            else
+            {
+                ownCollider.center = Vector3.Lerp(ownCollider.center, Vector3.zero, step);
+                ownCollider.height = Mathf.Lerp(ownCollider.height, 2, step);
+
+                cameraPos.y = 0f;
+            }
+
+            // ajdust the camera position
+            m_View.transform.localPosition = Vector3.MoveTowards(m_View.transform.localPosition, cameraPos, step);
+        }
+
+        void Recover()
+        {
+            if (RecoverInput)
+            {
+                FloorAlign(Vector3.up);
+                RecoverInput = false;
+            }
+        }
 
 #if !RIGIDBODY
         void CalculateGravity()
@@ -409,8 +472,11 @@ namespace Assets.Controller
             vel = Velocity;
 #endif
 
-            Handles.color = Color.blue;
-            Handles.ArrowHandleCap(0, transform.position, Quaternion.LookRotation(FacingDirection), 2, EventType.Repaint);
+            if (FacingDirection != Vector3.zero)
+            {
+                Handles.color = Color.blue;
+                Handles.ArrowHandleCap(0, transform.position, Quaternion.LookRotation(FacingDirection), 2, EventType.Repaint);
+            }
 
             if (wishDir != Vector3.zero)
             {
@@ -431,8 +497,10 @@ namespace Assets.Controller
             string gui = string.Format("Facing Direction: {0}\n", FacingDirection)
                 + string.Format("Foward Force: {0}\n", FowardForce)
                  + string.Format("Velocity: {0}\n", Velocity)
-                 + string.Format("Is Grounded: {0}\n", debugOnGround)
-                + string.Format("WishDir: {0}\n", wishDir);
+                 + string.Format("Is Grounded: {0}\n", OnGround)
+                + string.Format("WishDir: {0}\n", wishDir)
+                + string.Format("Velocity: {0}\n", body.velocity.magnitude)
+                + string.Format("Floor dot: {0}\n", debugFloorDot);
 
             GUI.Label(rect, gui, guiSkin.label);
         }
