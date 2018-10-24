@@ -64,14 +64,17 @@ namespace Assets.Controller
             if (Input.GetButtonDown("Crouch"))
                 isCrouching = !isCrouching;
 
-            if (Input.GetButtonDown("Jump"))
+            if (Input.GetButtonDown("Jump") && OnGround)
                 JumpInput = true;
 
             RecoverInput = Input.GetButtonDown("Recover");
 
             wishDir = transform.TransformDirection(Vector3.forward);
             if (FowardInput >= 0)
+            {
                 wishDir = Quaternion.Euler(0, 90 * yaw, 0) * wishDir;
+                //wishDir = Quaternion.Euler(0, m_Head.localEulerAngles.y, 0) * wishDir;
+            }
         }
 
         private void FixedUpdate()
@@ -217,7 +220,7 @@ namespace Assets.Controller
             radius -= 0.1f;
 
             // detect when the player is under something and don't let it stand
-            if(Physics.CapsuleCast(point0, point1, radius, transform.up, out hit, ownCollider.height, m_SolidLayer)
+            if (Physics.CapsuleCast(point0, point1, radius, transform.up, out hit, ownCollider.height, m_SolidLayer)
                 && OnGround)
             {
                 isCrouching = true;

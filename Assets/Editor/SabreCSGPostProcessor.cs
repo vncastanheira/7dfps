@@ -1,22 +1,25 @@
 ﻿using Sabresaurus.SabreCSG;
 using UnityEngine;
 
-public static class SabreCSGPostProcessor {
+namespace Assets.EditorScripts
+{
+    public static class SabreCSGPostProcessor {
 
-    [PostProcessCSGBuild]
-    public static void OnPostProcessCSGBuild(Transform meshGroup)
-    {
-        if (meshGroup != null)
+        [PostProcessCSGBuild]
+        public static void OnPostProcessCSGBuild(Transform meshGroup)
         {
-            SetLayerRecursively(meshGroup.gameObject, 11); // 11 :World
+            if (meshGroup != null)
+            {
+                SetLayerRecursively(meshGroup.gameObject, 11); // 11 :World
+            }
         }
-    }
 
-    public static void SetLayerRecursively(GameObject GO, int layer)
-    {
-        GO.layer = layer;
-        GO.isStatic = true;
-        for (int i = 0; i < GO.transform.childCount; i++)
-            SetLayerRecursively(GO.transform.GetChild(i).gameObject, layer);
+        public static void SetLayerRecursively(GameObject GO, int layer)
+        {
+            GO.layer = layer;
+            GO.isStatic = true;
+            for (int i = 0; i < GO.transform.childCount; i++)
+                SetLayerRecursively(GO.transform.GetChild(i).gameObject, layer);
+        }
     }
 }
