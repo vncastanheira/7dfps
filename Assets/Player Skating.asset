@@ -11,11 +11,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f1e22143e0eb17940b9762f0f26c83aa, type: 3}
   m_Name: Player Skating
   m_EditorClassIdentifier: 
-  m_stopspeed: 0.0225
   m_acceleration: 25
   m_airAccelerationFactor: 0.1
-  m_crouchingAccelerationFactor: 0.25
+  m_crouchingAccelerationFactor: 0.3
   m_jumpImpulse: 65
+  m_aimAssistSpeed: 0.75
   m_maxSpeed: 10
   m_turningSpeed: 0.06
   m_airFriction: 0.01
@@ -23,8 +23,7 @@ MonoBehaviour:
   SlopeLimit: 0.2
   m_planesDotAngleThreshold: 0.7
   m_rotateSpeed: 8
-  m_groundDistance: 0.1
-  m_wallBounce: 0.005
+  m_groundDistance: 0.13
   m_mass: 8
   m_drag: 0.1
   m_crouchingDrag: 0.01
