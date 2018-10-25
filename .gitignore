@@ -1,5 +1,7 @@
 Library
 Temp
+Builds
+*.csproj
 /.vs/7dfps/v15
 /obj/Debug
 /vnclib.csproj
