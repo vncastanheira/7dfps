@@ -7,13 +7,15 @@ namespace Assets.Controller
     [CreateAssetMenu(fileName = "SkatingSetting", menuName = "Game/Skating Settings")]
     public class SkatingControllerSettings : ScriptableObject
     {
-        public float m_stopspeed = 1f;
-
         public float m_acceleration = 0.32f;
         public float m_airAccelerationFactor = 0.1f; // proportional to normal acceleration
         public float m_crouchingAccelerationFactor = 0.5f; // proportional to normal acceleration
         public float m_jumpImpulse = 5f;
 
+        [Space]
+        public float m_aimAssistSpeed = 0.75f;
+
+        [Space]
         public float m_maxSpeed = 0.03f;
         public float m_turningSpeed = 0.1f;
         public float m_airFriction = 0.01f;
@@ -23,7 +25,8 @@ namespace Assets.Controller
         [Range(0.01f, 1f)] public float m_planesDotAngleThreshold = 0.7f;   // threshold for changing plane alignment
         public float m_rotateSpeed = 8f;         // speed to change rotations
         public float m_groundDistance = 0.2f;   // check if controller is touching ground
-        public float m_wallBounce = 2f;
+        
+        
 
         [Header("Rigidbody Properties")]
         public float m_mass = 8f;

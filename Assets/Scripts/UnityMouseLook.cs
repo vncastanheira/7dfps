@@ -33,13 +33,15 @@ public class UnityMouseLook
     }
 
 
-    public void LookRotation(Transform character, Transform camera)
+    public void LookRotation(Transform character, Transform camera, bool autoAim, float autoAimSpeed)
     {
         kick -= (Time.deltaTime * cameraKickSpeed);
         kick = Mathf.Clamp(kick, 0, cameraKickOffset);
 
-        float yRot = Input.GetAxis("LookHorizontal") * m_HorizontalSpeed;
-        float xRot = Input.GetAxis("LookVertical") * m_VerticalSpeed;
+        float aimSpeed = autoAim ? autoAimSpeed : 1f;
+
+        float yRot = Input.GetAxis("LookHorizontal") * m_HorizontalSpeed * aimSpeed;
+        float xRot = Input.GetAxis("LookVertical") * m_VerticalSpeed * aimSpeed;
 
         m_CharacterTargetRot *= Quaternion.Euler(0f, yRot, 0f);
         m_CameraTargetRot *= Quaternion.Euler(-xRot, 0f, 0f);

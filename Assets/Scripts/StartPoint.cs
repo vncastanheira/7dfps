@@ -1,5 +1,6 @@
 ﻿using Assets.Controller;
 using UnityEngine;
+using vnc.Tools;
 
 namespace Assets
 {
@@ -23,6 +24,8 @@ namespace Assets
             }
 
             ownCamera.gameObject.SetActive(false);
+
+            VncEventSystem.Trigger(new GameEvent { Event = GameEventType.TrackStart });
         }
     }
 }

@@ -1,15 +1,15 @@
 ﻿#define CLASSIC
 #define RIGIDBODY
 
-using System.Collections;
-using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using vnc.Tools;
 using vnc.Utilities;
 
 namespace Assets.Controller
 {
-    public partial class SkatingController : MonoBehaviour
+    public partial class SkatingController : MonoBehaviour,
+        IVncEventListener<GameEvent>
     {
         [Header("Settings")]
 #if RIGIDBODY
@@ -49,13 +49,14 @@ namespace Assets.Controller
             FowardForce = 0f;
             wishDir = Vector3.zero;
             m_MouseLook.Init(m_Head.transform, m_View.transform);
+
+            this.Listen();
         }
 
         void Update()
         {
-            m_MouseLook.SetCursorLock(true);
-            m_MouseLook.LookRotation(m_Head, m_View.transform);
-            m_MouseLook.UpdateCursorLock();
+            UpdateView();
+            UpdateGun();
 
             // get input
             FacingDirection = transform.forward;
@@ -159,6 +160,7 @@ namespace Assets.Controller
             point0 += offset;
             point1 += offset;
 
+
             radius -= 0.1f;
             distance = ownCollider.height + m_Settings.m_groundDistance;
 
@@ -257,6 +259,24 @@ namespace Assets.Controller
                 FloorAlign(Vector3.up);
                 RecoverInput = false;
             }
+        }
+
+
+        public void OnVncEvent(GameEvent e)
+        {
+            switch (e.Event)
+            {
+                case GameEventType.TrackStart:
+                    break;
+                case GameEventType.TrackEnd:
+                    gameObject.SetActive(false);
+                    break;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            this.Unlisten();
         }
 
 #if !RIGIDBODY
@@ -492,21 +512,27 @@ namespace Assets.Controller
                 Handles.color = Color.red;
                 Handles.ArrowHandleCap(0, transform.position, Quaternion.LookRotation(debugPlane), 2, EventType.Repaint);
             }
+            DrawGizmosGun();
         }
 
         private void OnGUI()
         {
-            Rect rect = new Rect(0, 0, 300, 300);
+            Rect rect = new Rect(Screen.width- guiSkin.label.fixedWidth, 0,
+                guiSkin.label.fixedWidth, guiSkin.label.fixedHeight);
             string gui = string.Format("Facing Direction: {0}\n", FacingDirection)
                 + string.Format("Foward Force: {0}\n", FowardForce)
                  + string.Format("Velocity: {0}\n", Velocity)
                  + string.Format("Is Grounded: {0}\n", OnGround)
                 + string.Format("WishDir: {0}\n", wishDir)
                 + string.Format("Velocity: {0}\n", body.velocity.magnitude)
-                + string.Format("Floor dot: {0}\n", debugFloorDot);
+                + string.Format("Floor dot: {0}\n", debugFloorDot)
+                + string.Format("Aim assist: {0}\n", aimAssist);
 
             GUI.Label(rect, gui, guiSkin.label);
+
+            
         }
+
         #endregion
 #endif
     }

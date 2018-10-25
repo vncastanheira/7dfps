@@ -33,7 +33,7 @@ namespace Assets.Player
             if (Application.isPlaying)
             {
                 m_MouseLook.SetCursorLock(true);
-                m_MouseLook.LookRotation(m_PlayerHead, m_PlayerView);
+                //m_MouseLook.LookRotation(m_PlayerHead, m_PlayerView);
                 m_MouseLook.UpdateCursorLock();
 
                 float fwd = (Input.GetButton("Forward") ? 1 : 0) - (Input.GetButton("Backwards") ? 1 : 0);

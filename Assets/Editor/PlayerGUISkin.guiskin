@@ -216,7 +216,7 @@ MonoBehaviour:
   m_label:
     m_Name: label
     m_Normal:
-      m_Background: {fileID: 2800000, guid: fadb2ac9482bb614d8f34df22a733aee, type: 3}
+      m_Background: {fileID: 2800000, guid: fdec1a08e20018b4499f0077a1f5bdc1, type: 3}
       m_ScaledBackgrounds: []
       m_TextColor: {r: 0.9, g: 0.9, b: 0.9, a: 1}
     m_Hover:
@@ -277,7 +277,7 @@ MonoBehaviour:
     m_ImagePosition: 0
     m_ContentOffset: {x: 0, y: 0}
     m_FixedWidth: 300
-    m_FixedHeight: 150
+    m_FixedHeight: 200
     m_StretchWidth: 1
     m_StretchHeight: 1
   m_textField:
