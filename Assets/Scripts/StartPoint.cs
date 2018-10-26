@@ -8,6 +8,7 @@ namespace Assets
     {
         public Camera ownCamera;
         public SkatingController m_playerPrefab;
+
         SkatingController instanceController;
 
         void Start()

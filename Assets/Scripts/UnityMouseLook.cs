@@ -33,32 +33,27 @@ public class UnityMouseLook
     }
 
 
-    public void LookRotation(Transform character, Transform camera, bool autoAim, float autoAimSpeed)
+    public void LookRotationCamera(Transform camera, bool autoAim, float autoAimSpeed)
     {
         kick -= (Time.deltaTime * cameraKickSpeed);
         kick = Mathf.Clamp(kick, 0, cameraKickOffset);
 
         float aimSpeed = autoAim ? autoAimSpeed : 1f;
 
-        float yRot = Input.GetAxis("LookHorizontal") * m_HorizontalSpeed * aimSpeed;
         float xRot = Input.GetAxis("LookVertical") * m_VerticalSpeed * aimSpeed;
 
-        m_CharacterTargetRot *= Quaternion.Euler(0f, yRot, 0f);
         m_CameraTargetRot *= Quaternion.Euler(-xRot, 0f, 0f);
 
         m_CameraTargetRot = ClampRotationAroundXAxis(m_CameraTargetRot);
-        m_CharacterTargetRot = ClampRotationAroundYAxis(m_CharacterTargetRot);
+        //m_CharacterTargetRot = ClampRotationAroundYAxis(m_CharacterTargetRot);
 
         if (smooth)
         {
-            character.localRotation = Quaternion.Slerp(character.localRotation, m_CharacterTargetRot,
-                smoothTime * Time.deltaTime);
             camera.localRotation = Quaternion.Slerp(camera.localRotation, m_CameraTargetRot,
                 smoothTime * Time.deltaTime);
         }
         else
         {
-            character.localRotation = m_CharacterTargetRot;
             camera.localRotation = m_CameraTargetRot;
 
             if (cameraKick)
@@ -66,6 +61,26 @@ public class UnityMouseLook
                 var x = Mathf.Clamp(kick, 0, cameraKickOffset - cameraKickoffsetWindow);
                 camera.localRotation *= Quaternion.Euler(-x, 0, 0);
             }
+        }
+    }
+
+    public void LookRotationCharacter(Transform character, bool autoAim, float autoAimSpeed)
+    {
+        float aimSpeed = autoAim ? autoAimSpeed : 1f;
+
+        float yRot = Input.GetAxis("LookHorizontal") * m_HorizontalSpeed * aimSpeed;
+
+        m_CharacterTargetRot *= Quaternion.Euler(0f, yRot, 0f);
+
+        if (smooth)
+        {
+            character.localRotation = Quaternion.Slerp(character.localRotation, m_CharacterTargetRot,
+                smoothTime * Time.deltaTime);
+        }
+        else
+        {
+            character.localRotation = m_CharacterTargetRot;
+            
         }
     }
 
@@ -87,6 +102,8 @@ public class UnityMouseLook
             Cursor.visible = true;
         }
     }
+
+    public void Kick(float k) { kick = k; }
 
     Quaternion ClampRotationAroundXAxis(Quaternion q)
     {

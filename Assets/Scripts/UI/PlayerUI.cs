@@ -1,6 +1,7 @@
 ﻿using Assets.Managers;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using TMPro;
 using UnityEngine;
 
@@ -16,7 +17,8 @@ namespace Assets.UI
         void Update()
         {
             m_SpeedText.text = m_body.velocity.sqrMagnitude.ToString("0");
-            m_TimerText.text = string.Format("Time: {0}", ScoreManager.Instance.Timer.ToString("0:000"));
+            string timer = ScoreManager.Instance.Timer.ToString("0.000", CultureInfo.InvariantCulture).Replace('.', '\"');
+            m_TimerText.text = string.Format("Time: {0}", timer);
         }
     }
 }

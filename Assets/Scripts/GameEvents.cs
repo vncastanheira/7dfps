@@ -12,6 +12,12 @@ namespace Assets
     public enum GameEventType
     {
         TrackStart,
+        TrackRestart,
         TrackEnd
+    }
+
+    public struct ButtonPressedEvent
+    {
+        public GameObject target;
     }
 }

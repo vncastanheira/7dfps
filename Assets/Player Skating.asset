@@ -17,7 +17,7 @@ MonoBehaviour:
   m_jumpImpulse: 65
   m_aimAssistSpeed: 0.75
   m_maxSpeed: 10
-  m_turningSpeed: 0.06
+  m_turningSpeed: 0.1
   m_airFriction: 0.01
   m_gravity: 0.1
   SlopeLimit: 0.2

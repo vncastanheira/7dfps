@@ -43,6 +43,7 @@ namespace Assets.Managers
             switch (e.Event)
             {
                 case GameEventType.TrackStart:
+                case GameEventType.TrackRestart:
                     timeStart = Time.time;
                     trackRunning = true;
                     break;

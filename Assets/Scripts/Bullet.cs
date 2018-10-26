@@ -17,7 +17,7 @@ namespace Assets
                 out hit, 2f, hitMask, QueryTriggerInteraction.Ignore))
             {
                 Quaternion rotation = Quaternion.LookRotation(hit.normal) * Quaternion.Euler(0, 0, Random.Range(0, 356));
-                var decal = Instantiate(m_decal, hit.point + hit.normal * 0.1f, rotation);
+                var decal = Instantiate(m_decal, hit.point + hit.normal * 0.01f, rotation);
                 Destroy(decal.gameObject, 50f);
                 Destroy(gameObject);
             }

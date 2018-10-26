@@ -18,8 +18,9 @@ namespace Assets.Controller
         public SkatingControllerSettings m_Settings;
         [Space]
         public CapsuleCollider ownCollider;
+        //public Transform m_arrow;
         public LayerMask m_SolidLayer;
-        public LayerMask m_EnemyLayer;
+        public LayerMask m_ButtonLayer;
 
         // velocity
         Vector3 Velocity;
@@ -29,6 +30,7 @@ namespace Assets.Controller
 
         // etc
         private float FowardInput;
+        private float Yaw;
         private bool isCrouching;
         private bool JumpInput;
         private bool RecoverInput;  // adjust the player rotation when it falls sideway on the floor 
@@ -49,6 +51,7 @@ namespace Assets.Controller
             FowardForce = 0f;
             wishDir = Vector3.zero;
             m_MouseLook.Init(m_Head.transform, m_View.transform);
+            lockCursor = true;
 
             this.Listen();
         }
@@ -61,7 +64,12 @@ namespace Assets.Controller
             // get input
             FacingDirection = transform.forward;
             FowardInput = (Input.GetButton("Forward") ? 1 : 0) - (Input.GetButton("Backwards") ? 1 : 0);
-            float yaw = (Input.GetButton("Right") ? 1 : 0) - (Input.GetButton("Left") ? 1 : 0);
+            float strafe = (Input.GetButton("Right") ? 1 : 0) - (Input.GetButton("Left") ? 1 : 0);
+
+            // body rotation
+            float aimSpeed = aimAssist ? m_Settings.m_aimAssistSpeed : 1f;
+            Yaw = Input.GetAxis("LookHorizontal") * m_MouseLook.m_HorizontalSpeed * aimSpeed;
+
             if (Input.GetButtonDown("Crouch"))
                 isCrouching = !isCrouching;
 
@@ -70,12 +78,17 @@ namespace Assets.Controller
 
             RecoverInput = Input.GetButtonDown("Recover");
 
-            wishDir = transform.TransformDirection(Vector3.forward);
-            if (FowardInput >= 0)
-            {
-                wishDir = Quaternion.Euler(0, 90 * yaw, 0) * wishDir;
-                //wishDir = Quaternion.Euler(0, m_Head.localEulerAngles.y, 0) * wishDir;
-            }
+            wishDir = transform.TransformDirection(Vector3.forward) * FowardInput;
+            wishDir += transform.TransformDirection(Vector3.right) * strafe;
+            wishDir.Normalize();
+
+            //if (FowardInput >= 0)
+            //{
+            //    wishDir = Quaternion.Euler(0, 90 * yaw, 0) * wishDir;
+            //    //wishDir = Quaternion.Euler(0, m_Head.localEulerAngles.y, 0) * wishDir;
+            //}
+
+            //DisplayArrow();
         }
 
         private void FixedUpdate()
@@ -88,7 +101,7 @@ namespace Assets.Controller
 
 
 #if RIGIDBODY
-            Turning();
+            //Turning();
 
             RaycastHit hit;
             OnGround = GetGround(out hit);
@@ -101,7 +114,9 @@ namespace Assets.Controller
                 // align the controller with the plane if the angle isn't too high
                 debugFloorDot = Vector3.Dot(transform.up, hit.normal);
                 if (debugFloorDot > m_Settings.m_planesDotAngleThreshold)
-                    FloorAlign(hit.normal);
+                    ControllerAlign(hit.normal);
+                else
+                    ControllerAlign(Vector3.up);
 
                 if (JumpInput)
                 {
@@ -114,7 +129,7 @@ namespace Assets.Controller
             else // in mid air
             {
                 MoveAir();
-                FloorAlign(Vector3.up);
+                ControllerAlign(Vector3.up);
             }
 
             Crouch();
@@ -168,7 +183,7 @@ namespace Assets.Controller
         }
 
         float debugFloorDot;
-        void FloorAlign(Vector3 up)
+        void ControllerAlign(Vector3 up)
         {
             Quaternion targetRot;
             // align the rotation
@@ -177,19 +192,22 @@ namespace Assets.Controller
             // smooth interpolation
             targetRot = Quaternion.Slerp(transform.rotation, targetRot, Time.fixedDeltaTime * m_Settings.m_rotateSpeed);
 
+            targetRot *= Quaternion.Euler(0f, Yaw, 0f);
+
             //transform.rotation = targetRot;
             body.MoveRotation(targetRot);
         }
 
         void Turning()
         {
-            Vector3 copy = wishDir;
+            Vector3 copy = m_Head.forward;
             copy.y = 0;
             FacingDirection += copy * m_Settings.m_turningSpeed;
             FacingDirection.Normalize();
 
+            Quaternion targetRot = Quaternion.LookRotation(FacingDirection, transform.up);
             // rotate sideways
-            transform.rotation = Quaternion.LookRotation(FacingDirection, transform.up);
+            transform.rotation = targetRot;
         }
 
         void MoveGround()
@@ -199,7 +217,7 @@ namespace Assets.Controller
             if (isCrouching)
                 factor = m_Settings.m_crouchingAccelerationFactor;
 
-            body.AddForce(FacingDirection * FowardInput * m_Settings.m_acceleration * factor, ForceMode.Acceleration);
+            body.AddForce(wishDir * m_Settings.m_acceleration * factor, ForceMode.Acceleration);
         }
 
         void MoveAir()
@@ -256,10 +274,25 @@ namespace Assets.Controller
         {
             if (RecoverInput)
             {
-                FloorAlign(Vector3.up);
+                ControllerAlign(Vector3.up);
                 RecoverInput = false;
             }
         }
+
+        //void DisplayArrow()
+        //{
+        //    var vel = body.velocity;
+        //    vel.y = 0;
+        //    if (vel != Vector3.zero)
+        //    {
+        //        m_arrow.rotation = Quaternion.LookRotation(vel);
+        //        m_arrow.gameObject.SetActive(true);
+        //    }
+        //    else
+        //    {
+        //        m_arrow.gameObject.SetActive(false);
+        //    }
+        //}
 
 
         public void OnVncEvent(GameEvent e)
@@ -267,8 +300,10 @@ namespace Assets.Controller
             switch (e.Event)
             {
                 case GameEventType.TrackStart:
+                    lockCursor = true;
                     break;
                 case GameEventType.TrackEnd:
+                    lockCursor = false;
                     gameObject.SetActive(false);
                     break;
             }
@@ -495,10 +530,10 @@ namespace Assets.Controller
             vel = Velocity;
 #endif
 
-            if (FacingDirection != Vector3.zero)
+            if (body.velocity != Vector3.zero)
             {
                 Handles.color = Color.blue;
-                Handles.ArrowHandleCap(0, transform.position, Quaternion.LookRotation(FacingDirection), 2, EventType.Repaint);
+                Handles.ArrowHandleCap(0, transform.position, Quaternion.LookRotation(body.velocity), 2, EventType.Repaint);
             }
 
             if (wishDir != Vector3.zero)
@@ -526,7 +561,8 @@ namespace Assets.Controller
                 + string.Format("WishDir: {0}\n", wishDir)
                 + string.Format("Velocity: {0}\n", body.velocity.magnitude)
                 + string.Format("Floor dot: {0}\n", debugFloorDot)
-                + string.Format("Aim assist: {0}\n", aimAssist);
+                + string.Format("Aim assist: {0}\n", aimAssist)
+                + string.Format("Yaw: {0}\n", Yaw);
 
             GUI.Label(rect, gui, guiSkin.label);
 
