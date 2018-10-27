@@ -1,10 +1,10 @@
 ﻿using UnityEngine;
 using vnc.Tools;
-using vnc.Utilities;
 
 namespace Assets
 {
-    public class FinishPoint : MonoBehaviour
+    public class FinishPoint : MonoBehaviour,
+        IVncEventListener<GameEvent>
     {
         public LayerMask m_player;
         public Camera m_camera;
@@ -19,10 +19,13 @@ namespace Assets
         {
             m_camera.gameObject.SetActive(false);
             originalCameraRot = m_camera.transform.rotation;
+            this.Listen();
         }
 
         private void Update()
         {
+            m_camera.gameObject.SetActive(trackEnded);
+
             if (trackEnded)
             {
                 Quaternion target = originalCameraRot * Quaternion.Euler(0, m_yaw * dir, 0);
@@ -32,15 +35,31 @@ namespace Assets
             }
         }
 
+        public void OnVncEvent(GameEvent e)
+        {
+            switch (e.Event)
+            {
+                case GameEventType.TrackStart:
+                case GameEventType.TrackRestart:
+                    trackEnded = false;
+                    break;
+                case GameEventType.TrackEnd:
+                    trackEnded = true;
+                    break;
+            }
+        }
+
         private void OnTriggerEnter(Collider other)
         {
-            if (other.gameObject.CompareLayer(m_player))
+            if (other.CompareTag("Player"))
             {
-                m_camera.gameObject.SetActive(true);
                 VncEventSystem.Trigger(new GameEvent { Event = GameEventType.TrackEnd });
-                trackEnded = true;
             }
+        }
 
+        private void OnDestroy()
+        {
+            this.Unlisten();
         }
     }
 }

@@ -21,6 +21,7 @@ namespace Assets.Controller
         //public Transform m_arrow;
         public LayerMask m_SolidLayer;
         public LayerMask m_ButtonLayer;
+        public TrailRenderer m_trail;
 
         // velocity
         Vector3 Velocity;
@@ -51,48 +52,62 @@ namespace Assets.Controller
             FowardForce = 0f;
             wishDir = Vector3.zero;
             m_MouseLook.Init(m_Head.transform, m_View.transform);
-            lockCursor = true;
 
             this.Listen();
         }
 
         void Update()
         {
-            UpdateView();
-            UpdateGun();
+            if(IsAlive)
+            {
+                m_View.gameObject.SetActive(true);
+                body.useGravity = true;
 
-            // get input
-            FacingDirection = transform.forward;
-            FowardInput = (Input.GetButton("Forward") ? 1 : 0) - (Input.GetButton("Backwards") ? 1 : 0);
-            float strafe = (Input.GetButton("Right") ? 1 : 0) - (Input.GetButton("Left") ? 1 : 0);
+                UpdateView();
+                UpdateGun();
 
-            // body rotation
-            float aimSpeed = aimAssist ? m_Settings.m_aimAssistSpeed : 1f;
-            Yaw = Input.GetAxis("LookHorizontal") * m_MouseLook.m_HorizontalSpeed * aimSpeed;
+                // get input
+                FacingDirection = transform.forward;
+                FowardInput = (Input.GetButton("Forward") ? 1 : 0) - (Input.GetButton("Backwards") ? 1 : 0);
+                float strafe = (Input.GetButton("Right") ? 1 : 0) - (Input.GetButton("Left") ? 1 : 0);
 
-            if (Input.GetButtonDown("Crouch"))
-                isCrouching = !isCrouching;
+                // body rotation
+                float aimSpeed = aimAssist ? m_Settings.m_aimAssistSpeed : 1f;
+                Yaw = Input.GetAxis("LookHorizontal") * m_MouseLook.m_HorizontalSpeed * aimSpeed;
 
-            if (Input.GetButtonDown("Jump") && OnGround)
-                JumpInput = true;
+                if (Input.GetButtonDown("Crouch"))
+                    isCrouching = !isCrouching;
 
-            RecoverInput = Input.GetButtonDown("Recover");
+                if (Input.GetButtonDown("Jump") && OnGround)
+                    JumpInput = true;
 
-            wishDir = transform.TransformDirection(Vector3.forward) * FowardInput;
-            wishDir += transform.TransformDirection(Vector3.right) * strafe;
-            wishDir.Normalize();
+                RecoverInput = Input.GetButtonDown("Recover");
 
-            //if (FowardInput >= 0)
-            //{
-            //    wishDir = Quaternion.Euler(0, 90 * yaw, 0) * wishDir;
-            //    //wishDir = Quaternion.Euler(0, m_Head.localEulerAngles.y, 0) * wishDir;
-            //}
+                wishDir = transform.TransformDirection(Vector3.forward) * FowardInput;
+                wishDir += transform.TransformDirection(Vector3.right) * strafe;
+                wishDir.Normalize();
 
-            //DisplayArrow();
+                //if (FowardInput >= 0)
+                //{
+                //    wishDir = Quaternion.Euler(0, 90 * yaw, 0) * wishDir;
+                //    //wishDir = Quaternion.Euler(0, m_Head.localEulerAngles.y, 0) * wishDir;
+                //}
+
+                //DisplayArrow();
+            }
+            else
+            {
+                m_View.gameObject.SetActive(false);
+                body.velocity = Vector3.zero;
+                body.useGravity = false;
+            }
         }
 
         private void FixedUpdate()
         {
+            if(!IsAlive)
+                return;
+
             body.mass = m_Settings.m_mass;
             if (isCrouching)
                 body.drag = m_Settings.m_crouchingDrag; // less air resistance when crouching
@@ -120,6 +135,9 @@ namespace Assets.Controller
 
                 if (JumpInput)
                 {
+                    if (isCrouching && CanStand())
+                        isCrouching = false;
+
                     body.AddForce(hit.normal * m_Settings.m_jumpImpulse, ForceMode.Impulse);
                     JumpInput = false;
                 }
@@ -129,6 +147,7 @@ namespace Assets.Controller
             else // in mid air
             {
                 MoveAir();
+
                 ControllerAlign(Vector3.up);
             }
 
@@ -166,9 +185,6 @@ namespace Assets.Controller
             Vector3 point0, point1, offset;
             float radius, distance;
 
-            //PhysicsExtensions.CapsuleCastOffset(ownCollider, -transform.up, out hit, transform.up,
-            //    (ownCollider.height * 2), m_SolidLayer);
-
             offset = transform.up;
 
             ownCollider.ToWorldSpaceCapsule(out point0, out point1, out radius);
@@ -179,7 +195,11 @@ namespace Assets.Controller
             radius -= 0.1f;
             distance = ownCollider.height + m_Settings.m_groundDistance;
 
-            return Physics.CapsuleCast(point0, point1, radius, -transform.up, out hit, distance, m_SolidLayer);
+            bool onGround = Physics.CapsuleCast(point0, point1, radius, -transform.up, out hit, distance, m_SolidLayer);
+            //if (Vector3.Dot(transform.up, hit.normal) < m_Settings.m_planesDotAngleThreshold)
+            //    return false;
+
+            return onGround;
         }
 
         float debugFloorDot;
@@ -225,7 +245,7 @@ namespace Assets.Controller
             if (isCrouching)
                 return;
 
-            body.AddForce(FacingDirection * FowardInput * m_Settings.m_acceleration * m_Settings.m_airAccelerationFactor, ForceMode.Acceleration);
+            body.AddForce(wishDir * m_Settings.m_acceleration * m_Settings.m_airAccelerationFactor, ForceMode.Acceleration);
         }
 
         /// <summary>
@@ -233,18 +253,10 @@ namespace Assets.Controller
         /// </summary>
         void Crouch()
         {
-            RaycastHit hit;
-            Vector3 point0, point1;
-            float radius;
-            ownCollider.ToWorldSpaceCapsule(out point0, out point1, out radius);
-            radius -= 0.1f;
-
             // detect when the player is under something and don't let it stand
-            if (Physics.CapsuleCast(point0, point1, radius, transform.up, out hit, ownCollider.height, m_SolidLayer)
-                && OnGround)
+            if (!CanStand() && OnGround)
             {
                 isCrouching = true;
-                return;
             }
 
             // adjust the collider size
@@ -268,6 +280,22 @@ namespace Assets.Controller
 
             // ajdust the camera position
             m_View.transform.localPosition = Vector3.MoveTowards(m_View.transform.localPosition, cameraPos, step);
+        }
+
+        /// <summary>
+        /// Check if there is nothing blocking the player while he is crouching
+        /// </summary>
+        /// <returns>If can stand</returns>
+        bool CanStand()
+        {
+            RaycastHit hit;
+            Vector3 point0, point1;
+            float radius;
+            ownCollider.ToWorldSpaceCapsule(out point0, out point1, out radius);
+            radius -= 0.1f;
+            bool isBlocking = Physics.CapsuleCast(point0, point1, radius, transform.up, out hit, ownCollider.height, m_SolidLayer);
+
+            return !isBlocking;
         }
 
         void Recover()
@@ -300,11 +328,15 @@ namespace Assets.Controller
             switch (e.Event)
             {
                 case GameEventType.TrackStart:
-                    lockCursor = true;
+                    IsAlive = true;
+                    break;
+                case GameEventType.TrackRestart:
+                    isCrouching = false;
+                    IsAlive = true;
+                    m_trail.Clear();
                     break;
                 case GameEventType.TrackEnd:
-                    lockCursor = false;
-                    gameObject.SetActive(false);
+                    IsAlive = false;
                     break;
             }
         }
@@ -552,12 +584,13 @@ namespace Assets.Controller
 
         private void OnGUI()
         {
-            Rect rect = new Rect(Screen.width- guiSkin.label.fixedWidth, 0,
+            Rect rect = new Rect(Screen.width - guiSkin.label.fixedWidth, 0,
                 guiSkin.label.fixedWidth, guiSkin.label.fixedHeight);
             string gui = string.Format("Facing Direction: {0}\n", FacingDirection)
                 + string.Format("Foward Force: {0}\n", FowardForce)
                  + string.Format("Velocity: {0}\n", Velocity)
                  + string.Format("Is Grounded: {0}\n", OnGround)
+                 + string.Format("Is Crouching: {0}\n", isCrouching)
                 + string.Format("WishDir: {0}\n", wishDir)
                 + string.Format("Velocity: {0}\n", body.velocity.magnitude)
                 + string.Format("Floor dot: {0}\n", debugFloorDot)
@@ -566,7 +599,7 @@ namespace Assets.Controller
 
             GUI.Label(rect, gui, guiSkin.label);
 
-            
+
         }
 
         #endregion

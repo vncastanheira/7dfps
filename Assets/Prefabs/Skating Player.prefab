@@ -53,6 +53,7 @@ GameObject:
   - component: {fileID: 224632803774716418}
   - component: {fileID: 223911267455604506}
   - component: {fileID: 114724680369207832}
+  - component: {fileID: 225074815196953450}
   - component: {fileID: 114209842877230034}
   m_Layer: 9
   m_Name: Canvas
@@ -227,7 +228,7 @@ GameObject:
   - component: {fileID: 33606618288052600}
   m_Layer: 9
   m_Name: Skating Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -732,6 +733,7 @@ MonoBehaviour:
   m_ButtonLayer:
     serializedVersion: 2
     m_Bits: 1024
+  m_trail: {fileID: 96036455174378428}
   OnGround: 1
   IsAlive: 1
   Collisions: 0
@@ -1328,3 +1330,14 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!225 &225074815196953450
+CanvasGroup:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1129547013402816}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0

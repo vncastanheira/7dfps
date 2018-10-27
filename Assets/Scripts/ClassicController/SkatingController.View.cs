@@ -11,11 +11,10 @@ namespace Assets.Controller
         public Transform m_Head;    // generelly the camera parent
         public Camera m_View;       // the main camera view
         public UnityMouseLook m_MouseLook;
-        bool lockCursor;
 
         public void UpdateView()
         {
-            m_MouseLook.SetCursorLock(lockCursor);
+            m_MouseLook.SetCursorLock(true);
             m_MouseLook.LookRotationCamera(m_View.transform, aimAssist, m_Settings.m_aimAssistSpeed);
             m_MouseLook.UpdateCursorLock();
         }

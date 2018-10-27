@@ -1,4 +1,5 @@
 ﻿using Assets.Controller;
+using Assets.Managers;
 using UnityEngine;
 using vnc.Tools;
 
@@ -9,22 +10,21 @@ namespace Assets
         public Camera ownCamera;
         public SkatingController m_playerPrefab;
 
-        SkatingController instanceController;
-
         void Start()
         {
-            instanceController = FindObjectOfType<SkatingController>();
-            if (instanceController == null)
+            GameManager.Instance.playerInstance = FindObjectOfType<SkatingController>();
+            if (GameManager.Instance.playerInstance == null)
             {
-                instanceController = Instantiate(m_playerPrefab, transform.position, transform.rotation);
+                GameManager.Instance.playerInstance = Instantiate(m_playerPrefab, transform.position, transform.rotation);
             }
             else
             {
-                instanceController.transform.position = transform.position;
-                instanceController.transform.rotation = transform.rotation;
+                GameManager.Instance.playerInstance.transform.position = transform.position;
+                GameManager.Instance.playerInstance.transform.rotation = transform.rotation;
             }
 
             ownCamera.gameObject.SetActive(false);
+            GameManager.Instance.currentStartPoint = this; 
 
             VncEventSystem.Trigger(new GameEvent { Event = GameEventType.TrackStart });
         }
