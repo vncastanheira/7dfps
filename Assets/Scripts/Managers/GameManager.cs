@@ -1,5 +1,7 @@
 ﻿using Assets.Controller;
+using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using vnc.Tools;
 
 namespace Assets.Managers
@@ -58,6 +60,9 @@ namespace Assets.Managers
                     break;
                 case GameEventType.TrackRestart:
                     RestartTrack();
+                    Time.timeScale = 1f;
+                    Cursor.lockState = CursorLockMode.None;
+                    Cursor.visible = true;
                     break;
                 case GameEventType.TrackEnd:
                     Cursor.lockState = CursorLockMode.None;
@@ -67,11 +72,13 @@ namespace Assets.Managers
                     Time.timeScale = 0f;
                     Cursor.lockState = CursorLockMode.None;
                     Cursor.visible = true;
+                    Paused = true;
                     break;
                 case GameEventType.Resume:
                     Time.timeScale = 1f;
                     Cursor.lockState = CursorLockMode.None;
                     Cursor.visible = true;
+                    Paused = false;
                     break;
             }
         }
@@ -82,6 +89,11 @@ namespace Assets.Managers
             playerInstance.transform.rotation = currentStartPoint.transform.rotation;
             var playerRb = playerInstance.GetComponent<Rigidbody>();
             playerRb.velocity = Vector3.zero;
+        }
+
+        public IEnumerator LoadLevel(string name)
+        {
+            yield return SceneManager.LoadSceneAsync(name);
         }
 
         private void OnDestroy()

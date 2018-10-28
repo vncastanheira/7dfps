@@ -586,25 +586,21 @@ namespace Assets.Controller
             DrawGizmosGun();
         }
 
-        private void OnGUI()
-        {
-            Rect rect = new Rect(Screen.width - guiSkin.label.fixedWidth, 0,
-                guiSkin.label.fixedWidth, guiSkin.label.fixedHeight);
-            string gui = string.Format("Facing Direction: {0}\n", FacingDirection)
-                + string.Format("Foward Force: {0}\n", FowardForce)
-                 + string.Format("Velocity: {0}\n", Velocity)
-                 + string.Format("Is Grounded: {0}\n", OnGround)
-                 + string.Format("Is Crouching: {0}\n", isCrouching)
-                + string.Format("WishDir: {0}\n", wishDir)
-                + string.Format("Velocity: {0}\n", body.velocity.magnitude)
-                + string.Format("Floor dot: {0}\n", debugFloorDot)
-                + string.Format("Aim assist: {0}\n", aimAssist)
-                + string.Format("Yaw: {0}\n", Yaw);
+        //private void OnGUI()
+        //{
+        //    Rect rect = new Rect(Screen.width - guiSkin.label.fixedWidth, 0,
+        //        guiSkin.label.fixedWidth, guiSkin.label.fixedHeight);
+        //    string gui = string.Format("Facing Direction: {0}\n", FacingDirection)
+        //        + string.Format("Foward Force: {0}\n", FowardForce)
+        //         + string.Format("Velocity: {0}\n", Velocity)
+        //         + string.Format("Is Grounded: {0}\n", OnGround)
+        //         + string.Format("Is Crouching: {0}\n", isCrouching)
+        //        + string.Format("WishDir: {0}\n", wishDir)
+        //        + string.Format("Time Scale: {0}\n", Time.timeScale)
+        //        + string.Format("Is Alive: {0}\n", IsAlive);
 
-            GUI.Label(rect, gui, guiSkin.label);
-
-
-        }
+        //    GUI.Label(rect, gui, guiSkin.label);
+        //}
 
         #endregion
 #endif

@@ -1,8 +1,5 @@
 ﻿using Assets.Managers;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Assets.UI
@@ -15,14 +12,6 @@ namespace Assets.UI
         void Start()
         {
             canvasGroup = GetComponent<CanvasGroup>();
-            /*
-            for (int i = 0; i < SceneManager.sceneCountInBuildSettings; i++)
-            {
-                Scene s = SceneManager.GetSceneByBuildIndex(i);
-                var trackBtn = Instantiate(m_trackTemplate, m_tracklistLayout.transform);
-                var btnText = trackBtn.GetComponentInChildren<Text>();
-                btnText.text = s.name;
-            }*/
             for (int i = 0; i < GameManager.Instance.m_tracklistProfile.m_tracks.Length; i++)
             {
                 string trackName = GameManager.Instance.m_tracklistProfile.m_tracks[i];
@@ -33,5 +22,9 @@ namespace Assets.UI
             m_trackTemplate.gameObject.SetActive(false);
         }
 
+        public void MainMenu()
+        {
+            StartCoroutine(GameManager.Instance.LoadLevel("Title"));
+        }
     }
 }

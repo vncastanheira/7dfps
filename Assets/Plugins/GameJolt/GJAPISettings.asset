@@ -18,7 +18,7 @@ MonoBehaviour:
   autoSignInOutMessage: 0
   signInMessage: Signed in as '{0}'
   signOutMessage: Signed out
-  useCaching: 1
+  useCaching: 0
   encryptionKey: e+Qd9UR/SZhQ9ryA
   logLevel: 1
   secretTrophies: 

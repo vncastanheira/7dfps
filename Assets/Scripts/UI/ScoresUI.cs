@@ -1,9 +1,5 @@
 ﻿using Assets.Managers;
-using GameJolt.API;
 using GameJolt.API.Objects;
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Globalization;
 using TMPro;
 using UnityEngine;
@@ -63,13 +59,14 @@ namespace Assets.UI
         public void ShowFinalScore()
         {
             m_finalTimerText.text = string.Format("{0} {1}", m_finalTimerPrefix, ScoreManager.Instance.TimerFormatted);
-            
+
         }
 
         #region Options
-        public void NextLevel()
+        public void TracksMenu()
         {
-
+            StartCoroutine(GameManager.Instance.LoadLevel("Tracks Menu"));
+            Hide();
         }
 
         public void Restart()
@@ -79,7 +76,8 @@ namespace Assets.UI
 
         public void MainMenu()
         {
-
+            StartCoroutine(GameManager.Instance.LoadLevel("Title"));
+            Hide();
         }
         #endregion
 
@@ -89,13 +87,13 @@ namespace Assets.UI
         {
             for (int i = 0; i < scores.Length; i++)
             {
-                if(cachedInstances[i] == null)
+                if (cachedInstances[i] == null)
                     cachedInstances[i] = Instantiate(m_scoreTemplate, m_leaderboard.transform, false);
 
                 float t = scores[i].Value;
                 string time = (t / 1000f).ToString("0.000", CultureInfo.InvariantCulture).Replace('.', '\"');
 
-                cachedInstances[i].text = string.Format("{0}. {1} by {2}", i+1, time, scores[i].PlayerName);
+                cachedInstances[i].text = string.Format("{0}. {1} by {2}", i + 1, time, scores[i].PlayerName);
                 cachedInstances[i].gameObject.SetActive(true);
             }
 
@@ -108,7 +106,7 @@ namespace Assets.UI
         private void OnDestroy()
         {
             this.Unlisten();
-        }       
+        }
     }
 
 }

@@ -15,7 +15,7 @@ namespace Assets.Managers
     {
         public static ScoreManager Instance { get; private set; }
 
-        [HideInInspector] public string GuestName = "Anonymous Surfer";
+        [HideInInspector] public string GuestName;
         public TableRegister[] m_tableList;
         Dictionary<string, int> m_tableDic;
         
@@ -40,6 +40,8 @@ namespace Assets.Managers
             {
                 m_tableDic.Add(m_tableList[i].TrackName, m_tableList[i].ID);
             }
+            int number = new System.Random().Next();
+            GuestName = string.Format("Surfer#{0}", number);
         }
 
         private void Start()
@@ -85,7 +87,7 @@ namespace Assets.Managers
                 int tableID = m_tableDic[currentScene.name];
                 //int tableID = 381463; // Set it to 0 for main highscore table.
                 string text = "Time (ms)"; // A string representing the score to be shown on the website.
-                Action<bool> callback = s =>
+                Action<bool> addScore = s =>
                 {
                     OnScoreAdded?.Invoke(s);
                     Scores.Get(OnScoreShow, table: tableID, limit: 10);
@@ -94,12 +96,12 @@ namespace Assets.Managers
                 int milliseconds = (int)(Timer * 1000);
                 if (GameJoltAPI.Instance.HasSignedInUser)
                 {
-                    Scores.Add(milliseconds, text, tableID, "", callback);
+                    Scores.Add(milliseconds, text, tableID, "", addScore);
                 }
                 else
                 {
-                    //TODO: prompt user to login or add a guest name
-                    Scores.Add(milliseconds, text, GuestName, tableID, "", callback);
+                    // Guest
+                    Scores.Add(milliseconds, text, GuestName, table: tableID, callback: addScore);
                 }
             }
             else

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using Assets.Managers;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using vnc.Tools;
@@ -33,7 +34,7 @@ namespace Assets.UI
 
         public void Menu()
         {
-
+            StartCoroutine(GameManager.Instance.LoadLevel("Tracks Menu"));
         }
 
         private void OnDestroy()

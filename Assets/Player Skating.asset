@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Name: Player Skating
   m_EditorClassIdentifier: 
   m_acceleration: 25
-  m_airAccelerationFactor: 0.1
+  m_airAccelerationFactor: 0.5
   m_crouchingAccelerationFactor: 0.3
   m_jumpImpulse: 65
   m_aimAssistSpeed: 0.75

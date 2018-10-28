@@ -6,18 +6,22 @@ using vnc.Tools;
 namespace Assets
 {
     public class Button : MonoBehaviour,
-        IVncEventListener<ButtonPressedEvent>
+        IVncEventListener<ButtonPressedEvent>,
+        IVncEventListener<GameEvent>
     {
         public Vector3 m_pressedOffset;
         public Door m_door;
 
+        Vector3 originalPosition;
         Vector3 pressedPosition;
         bool pressed = false;
 
         private void Start()
         {
+            originalPosition = transform.position;
             pressedPosition = transform.position + m_pressedOffset;
-            this.Listen();
+            this.Listen<ButtonPressedEvent>();
+            this.Listen<GameEvent>();
         }
 
         void Press()
@@ -34,10 +38,23 @@ namespace Assets
                 Press();
             }
         }
-        
+
+
+        public void OnVncEvent(GameEvent e)
+        {
+            switch (e.Event)
+            {
+                case GameEventType.TrackRestart:
+                    transform.position = originalPosition;
+                    pressed = false;
+                    break;                
+            }
+        }
+
         private void OnDestroy()
         {
-            this.Unlisten();
+            this.Unlisten<ButtonPressedEvent>();
+            this.Unlisten<GameEvent>();
         }
 
 #if UNITY_EDITOR
@@ -49,6 +66,7 @@ namespace Assets
                 Gizmos.DrawLine(transform.position, m_door.transform.position);
             }
         }
+
 #endif
     }
 }
