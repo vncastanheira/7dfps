@@ -1,6 +1,7 @@
 ﻿#define CLASSIC
 #define RIGIDBODY
 
+using Assets.Managers;
 using UnityEditor;
 using UnityEngine;
 using vnc.Tools;
@@ -94,12 +95,6 @@ namespace Assets.Controller
                 //}
 
                 //DisplayArrow();
-            }
-            else
-            {
-                m_View.gameObject.SetActive(false);
-                body.velocity = Vector3.zero;
-                body.useGravity = false;
             }
         }
 
@@ -328,6 +323,7 @@ namespace Assets.Controller
             switch (e.Event)
             {
                 case GameEventType.TrackStart:
+                case GameEventType.Resume:
                     IsAlive = true;
                     break;
                 case GameEventType.TrackRestart:
@@ -337,7 +333,15 @@ namespace Assets.Controller
                     break;
                 case GameEventType.TrackEnd:
                     IsAlive = false;
+                    m_View.gameObject.SetActive(false);
+                    body.velocity = Vector3.zero;
+                    body.useGravity = false;
                     break;
+                case GameEventType.Pause:
+                    IsAlive = false;
+                    break;
+                
+
             }
         }
 

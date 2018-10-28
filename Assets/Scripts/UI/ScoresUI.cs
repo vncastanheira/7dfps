@@ -13,7 +13,7 @@ using vnc.Tools;
 namespace Assets.UI
 {
     [RequireComponent(typeof(CanvasGroup))]
-    public class ScoresUI : MonoBehaviour,
+    public class ScoresUI : GroupUI,
         IVncEventListener<GameEvent>
     {
         [Header("Settings")]
@@ -25,7 +25,6 @@ namespace Assets.UI
         public TextMeshProUGUI m_scoreTemplate;
         public RectTransform m_loading;
 
-        CanvasGroup canvasGroup;
         TextMeshProUGUI[] cachedInstances = new TextMeshProUGUI[11];
 
         void Start()
@@ -105,23 +104,6 @@ namespace Assets.UI
 
         #endregion
 
-        #region Canvas Group
-
-        public void Hide()
-        {
-            canvasGroup.alpha = 0f;
-            canvasGroup.interactable = false;
-            canvasGroup.blocksRaycasts = false;
-        }
-
-        public void Show()
-        {
-            canvasGroup.alpha = 1f;
-            canvasGroup.interactable = true;
-            canvasGroup.blocksRaycasts = true;
-        }
-
-        #endregion
 
         private void OnDestroy()
         {

@@ -18,17 +18,7 @@ namespace Assets.Managers
         [HideInInspector] public string GuestName = "Anonymous Surfer";
         public TableRegister[] m_tableList;
         Dictionary<string, int> m_tableDic;
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        public static void Init()
-        {
-            Instance = FindObjectOfType<ScoreManager>();
-            if (Instance == null)
-            {
-                Instance = (new GameObject("_SCORE_MANAGER")).AddComponent<ScoreManager>();
-            }
-        }
-
+        
         public float Timer { get { return timeEnd - timeStart; } }
         public string TimerFormatted
         {
@@ -77,6 +67,12 @@ namespace Assets.Managers
                 case GameEventType.TrackEnd:
                     trackRunning = false;
                     RegisterAndShowScores();
+                    break;
+                case GameEventType.Pause:
+                    trackRunning = false;
+                    break;
+                case GameEventType.Resume:
+                    trackRunning = true;
                     break;
             }
         }

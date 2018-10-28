@@ -13,7 +13,9 @@ namespace Assets
     {
         TrackStart,
         TrackRestart,
-        TrackEnd
+        TrackEnd,
+        Pause,
+        Resume
     }
 
     public struct ButtonPressedEvent

@@ -9,8 +9,10 @@ namespace Assets.Managers
     {
         public static GameManager Instance { get; private set; }
 
+        public TracklistProfile m_tracklistProfile;
         [HideInInspector] public SkatingController playerInstance;
         [HideInInspector] public StartPoint currentStartPoint;
+        public bool Paused { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         public static void Init()
@@ -18,8 +20,8 @@ namespace Assets.Managers
             Instance = FindObjectOfType<GameManager>();
             if (Instance == null)
             {
-                //Instance = (new GameObject("_GAME_MANAGER")).AddComponent<GameManager>();
-                Instance = Resources.Load<GameManager>("_GAME_MANAGER");
+                var manager = Resources.Load<GameManager>("_GAME_MANAGER");
+                Instance = Instantiate(manager);
             }
         }
 
@@ -27,6 +29,23 @@ namespace Assets.Managers
         {
             this.Listen();
             DontDestroyOnLoad(gameObject);
+        }
+
+        private void Update()
+        {
+            if (Input.GetButtonDown("Pause"))
+            {
+                if(Paused)
+                {
+                    VncEventSystem.Trigger(new GameEvent { Event = GameEventType.Resume });
+                    Paused = false;
+                }
+                else
+                {
+                    VncEventSystem.Trigger(new GameEvent { Event = GameEventType.Pause });
+                    Paused = true;
+                }
+            }
         }
 
         public void OnVncEvent(GameEvent e)
@@ -41,6 +60,16 @@ namespace Assets.Managers
                     RestartTrack();
                     break;
                 case GameEventType.TrackEnd:
+                    Cursor.lockState = CursorLockMode.None;
+                    Cursor.visible = true;
+                    break;
+                case GameEventType.Pause:
+                    Time.timeScale = 0f;
+                    Cursor.lockState = CursorLockMode.None;
+                    Cursor.visible = true;
+                    break;
+                case GameEventType.Resume:
+                    Time.timeScale = 1f;
                     Cursor.lockState = CursorLockMode.None;
                     Cursor.visible = true;
                     break;

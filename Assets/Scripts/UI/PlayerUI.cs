@@ -9,14 +9,13 @@ using vnc.Tools;
 namespace Assets.UI
 {
     [RequireComponent(typeof(CanvasGroup))]
-    public class PlayerUI : MonoBehaviour,
+    public class PlayerUI : GroupUI,
         IVncEventListener<GameEvent>
     {
         [Header("Settings")]
         public TextMeshProUGUI m_SpeedText;
         public TextMeshProUGUI m_TimerText;
         public Rigidbody m_body;
-        CanvasGroup canvasGroup;
 
         private void Awake()
         {
@@ -45,26 +44,6 @@ namespace Assets.UI
                     break;
             }
         }
-
-
-        #region Canvas Group
-
-        public void Hide()
-        {
-            canvasGroup.alpha = 0f;
-            canvasGroup.interactable = false;
-            canvasGroup.blocksRaycasts = false;
-        }
-
-        public void Show()
-        {
-            canvasGroup.alpha = 1f;
-            canvasGroup.interactable = true;
-            canvasGroup.blocksRaycasts = true;
-        }
-
-        #endregion
-
 
         private void OnDestroy()
         {
