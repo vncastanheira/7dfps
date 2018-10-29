@@ -16,7 +16,6 @@ namespace Assets.Managers
         public static ScoreManager Instance { get; private set; }
 
         [HideInInspector] public string GuestName;
-        public TableRegister[] m_tableList;
         Dictionary<string, int> m_tableDic;
         
         public float Timer { get { return timeEnd - timeStart; } }
@@ -34,18 +33,20 @@ namespace Assets.Managers
         private void Awake()
         {
             Instance = this;
-
-            m_tableDic = new Dictionary<string, int>();
-            for (int i = 0; i < m_tableList.Length; i++)
-            {
-                m_tableDic.Add(m_tableList[i].TrackName, m_tableList[i].ID);
-            }
-            int number = new System.Random().Next();
-            GuestName = string.Format("Surfer#{0}", number);
         }
 
         private void Start()
         {
+            var tracks = GameManager.Instance.m_tracklistProfile.m_tracks;
+
+            m_tableDic = new Dictionary<string, int>();
+            for (int i = 0; i < tracks.Length; i++)
+            {
+                m_tableDic.Add(tracks[i].TrackName, tracks[i].ID);
+            }
+            int number = new System.Random().Next();
+            GuestName = string.Format("Surfer_{0}", number);
+
             this.Listen();
         }
 

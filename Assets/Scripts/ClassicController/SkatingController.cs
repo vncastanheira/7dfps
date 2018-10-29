@@ -27,7 +27,6 @@ namespace Assets.Controller
         // velocity
         Vector3 Velocity;
         Vector3 FacingDirection;
-        float FowardForce;
         Vector3 wishDir;
 
         // etc
@@ -50,7 +49,6 @@ namespace Assets.Controller
         void Start()
         {
             FacingDirection = transform.forward;
-            FowardForce = 0f;
             wishDir = Vector3.zero;
             m_MouseLook.Init(m_Head.transform, m_View.transform);
 
@@ -59,7 +57,7 @@ namespace Assets.Controller
 
         void Update()
         {
-            if(IsAlive)
+            if (IsAlive && !GameManager.Instance.Paused)
             {
                 m_View.gameObject.SetActive(true);
                 body.useGravity = true;
@@ -100,54 +98,55 @@ namespace Assets.Controller
 
         private void FixedUpdate()
         {
-            if(!IsAlive)
-                return;
-
-            body.mass = m_Settings.m_mass;
-            if (isCrouching)
-                body.drag = m_Settings.m_crouchingDrag; // less air resistance when crouching
-            else
-                body.drag = m_Settings.m_drag;
+            if (IsAlive && !GameManager.Instance.Paused)
+            {
+                body.mass = m_Settings.m_mass;
+                if (isCrouching)
+                    body.drag = m_Settings.m_crouchingDrag; // less air resistance when crouching
+                else
+                    body.drag = m_Settings.m_drag;
 
 
 #if RIGIDBODY
-            //Turning();
+                //Turning();
 
-            RaycastHit hit;
-            OnGround = GetGround(out hit);
-            if (OnGround)
-            {
-
-                wishDir = Vector3.ProjectOnPlane(wishDir, hit.normal);
-                MoveGround();
-
-                // align the controller with the plane if the angle isn't too high
-                debugFloorDot = Vector3.Dot(transform.up, hit.normal);
-                if (debugFloorDot > m_Settings.m_planesDotAngleThreshold)
-                    ControllerAlign(hit.normal);
-                else
-                    ControllerAlign(Vector3.up);
-
-                if (JumpInput)
+                RaycastHit hit;
+                OnGround = GetGround(out hit);
+                if (OnGround)
                 {
-                    if (isCrouching && CanStand())
-                        isCrouching = false;
 
-                    body.AddForce(hit.normal * m_Settings.m_jumpImpulse, ForceMode.Impulse);
-                    JumpInput = false;
+                    wishDir = Vector3.ProjectOnPlane(wishDir, hit.normal);
+                    MoveGround();
+
+                    // align the controller with the plane if the angle isn't too high
+                    debugFloorDot = Vector3.Dot(transform.up, hit.normal);
+                    if (debugFloorDot > m_Settings.m_planesDotAngleThreshold)
+                        ControllerAlign(hit.normal);
+                    else
+                        ControllerAlign(Vector3.up);
+
+                    if (JumpInput)
+                    {
+                        if (isCrouching && CanStand())
+                            isCrouching = false;
+
+                        body.AddForce(hit.normal * m_Settings.m_jumpImpulse, ForceMode.Impulse);
+                        JumpInput = false;
+                    }
+
+                    debugPlane = hit.normal;
+                }
+                else // in mid air
+                {
+                    MoveAir();
+
+                    ControllerAlign(Vector3.up);
                 }
 
-                debugPlane = hit.normal;
-            }
-            else // in mid air
-            {
-                MoveAir();
-
-                ControllerAlign(Vector3.up);
+                Crouch();
+                Recover();
             }
 
-            Crouch();
-            Recover();
 #else
             if (EnumExtensions.HasFlag(Collisions, CC_Collision.CollisionBelow))
             {
@@ -249,7 +248,7 @@ namespace Assets.Controller
         void Crouch()
         {
             // detect when the player is under something and don't let it stand
-            if (!CanStand() && OnGround)
+            if (!CanStand() && OnGround && isCrouching)
             {
                 isCrouching = true;
             }
@@ -323,8 +322,9 @@ namespace Assets.Controller
             switch (e.Event)
             {
                 case GameEventType.TrackStart:
-                case GameEventType.Resume:
                     IsAlive = true;
+                    break;
+                case GameEventType.Resume:
                     break;
                 case GameEventType.TrackRestart:
                     isCrouching = false;
@@ -338,9 +338,8 @@ namespace Assets.Controller
                     body.useGravity = false;
                     break;
                 case GameEventType.Pause:
-                    IsAlive = false;
                     break;
-                
+
 
             }
         }

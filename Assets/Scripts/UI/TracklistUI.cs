@@ -14,7 +14,7 @@ namespace Assets.UI
             canvasGroup = GetComponent<CanvasGroup>();
             for (int i = 0; i < GameManager.Instance.m_tracklistProfile.m_tracks.Length; i++)
             {
-                string trackName = GameManager.Instance.m_tracklistProfile.m_tracks[i];
+                string trackName = GameManager.Instance.m_tracklistProfile.m_tracks[i].TrackName;
                 var trackBtn = Instantiate(m_trackTemplate, m_tracklistLayout.transform);
                 trackBtn.SetTrack(trackName);
             }

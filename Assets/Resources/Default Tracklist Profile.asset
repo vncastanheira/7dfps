@@ -12,5 +12,11 @@ MonoBehaviour:
   m_Name: Default Tracklist Profile
   m_EditorClassIdentifier: 
   m_tracks:
-  - Tutorial
-  - Track1
+  - TrackName: Tutorial
+    ID: 381759
+  - TrackName: Track1
+    ID: 381758
+  - TrackName: Track2
+    ID: 381992
+  - TrackName: Track3
+    ID: 382114

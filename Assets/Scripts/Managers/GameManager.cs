@@ -61,8 +61,8 @@ namespace Assets.Managers
                 case GameEventType.TrackRestart:
                     RestartTrack();
                     Time.timeScale = 1f;
-                    Cursor.lockState = CursorLockMode.None;
-                    Cursor.visible = true;
+                    Cursor.lockState = CursorLockMode.Locked;
+                    Cursor.visible = false;
                     break;
                 case GameEventType.TrackEnd:
                     Cursor.lockState = CursorLockMode.None;
@@ -76,8 +76,8 @@ namespace Assets.Managers
                     break;
                 case GameEventType.Resume:
                     Time.timeScale = 1f;
-                    Cursor.lockState = CursorLockMode.None;
-                    Cursor.visible = true;
+                    Cursor.lockState = CursorLockMode.Locked;
+                    Cursor.visible = false;
                     Paused = false;
                     break;
             }
