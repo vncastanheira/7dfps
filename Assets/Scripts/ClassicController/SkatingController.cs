@@ -31,10 +31,11 @@ namespace Assets.Controller
 
         // etc
         private float FowardInput;
-        private float Yaw;
-        private bool isCrouching;
         private bool JumpInput;
         private bool RecoverInput;  // adjust the player rotation when it falls sideway on the floor 
+        private bool CrouchInput;
+        private bool isCrouching;
+        private float Yaw;
         [HideInInspector] public bool OnGround;
         [HideInInspector] public bool IsAlive = true;
         [HideInInspector] public CC_Collision Collisions;
@@ -75,7 +76,7 @@ namespace Assets.Controller
                 Yaw = Input.GetAxis("LookHorizontal") * m_MouseLook.m_HorizontalSpeed * aimSpeed;
 
                 if (Input.GetButtonDown("Crouch"))
-                    isCrouching = !isCrouching;
+                    CrouchInput = true;
 
                 if (Input.GetButtonDown("Jump") && OnGround)
                     JumpInput = true;
@@ -86,13 +87,10 @@ namespace Assets.Controller
                 wishDir += transform.TransformDirection(Vector3.right) * strafe;
                 wishDir.Normalize();
 
-                //if (FowardInput >= 0)
-                //{
-                //    wishDir = Quaternion.Euler(0, 90 * yaw, 0) * wishDir;
-                //    //wishDir = Quaternion.Euler(0, m_Head.localEulerAngles.y, 0) * wishDir;
-                //}
-
-                //DisplayArrow();
+                if (Input.GetButtonDown("Restart"))
+                {
+                    VncEventSystem.Trigger(new GameEvent { Event = GameEventType.TrackRestart });
+                }
             }
         }
 
@@ -179,7 +177,7 @@ namespace Assets.Controller
             Vector3 point0, point1, offset;
             float radius, distance;
 
-            offset = transform.up;
+            offset = Vector3.zero;
 
             ownCollider.ToWorldSpaceCapsule(out point0, out point1, out radius);
             point0 += offset;
@@ -247,11 +245,18 @@ namespace Assets.Controller
         /// </summary>
         void Crouch()
         {
-            // detect when the player is under something and don't let it stand
-            if (!CanStand() && OnGround && isCrouching)
+            if (CrouchInput)
             {
-                isCrouching = true;
+                if (isCrouching && CanStand())
+                {
+                    isCrouching = false;
+                }
+                else
+                {
+                    isCrouching = true;
+                }
             }
+
 
             // adjust the collider size
 
@@ -274,6 +279,8 @@ namespace Assets.Controller
 
             // ajdust the camera position
             m_View.transform.localPosition = Vector3.MoveTowards(m_View.transform.localPosition, cameraPos, step);
+
+            CrouchInput = false;
         }
 
         /// <summary>
@@ -585,21 +592,21 @@ namespace Assets.Controller
             DrawGizmosGun();
         }
 
-        //private void OnGUI()
-        //{
-        //    Rect rect = new Rect(Screen.width - guiSkin.label.fixedWidth, 0,
-        //        guiSkin.label.fixedWidth, guiSkin.label.fixedHeight);
-        //    string gui = string.Format("Facing Direction: {0}\n", FacingDirection)
-        //        + string.Format("Foward Force: {0}\n", FowardForce)
-        //         + string.Format("Velocity: {0}\n", Velocity)
-        //         + string.Format("Is Grounded: {0}\n", OnGround)
-        //         + string.Format("Is Crouching: {0}\n", isCrouching)
-        //        + string.Format("WishDir: {0}\n", wishDir)
-        //        + string.Format("Time Scale: {0}\n", Time.timeScale)
-        //        + string.Format("Is Alive: {0}\n", IsAlive);
+        private void OnGUI()
+        {
+            Rect rect = new Rect(Screen.width - guiSkin.label.fixedWidth, 0,
+                guiSkin.label.fixedWidth, guiSkin.label.fixedHeight);
+            string gui = string.Format("Facing Direction: {0}\n", FacingDirection)
+                 + string.Format("Velocity: {0}\n", Velocity)
+                 + string.Format("Is Grounded: {0}\n", OnGround)
+                 + string.Format("Is Crouching: {0}\n", isCrouching)
+                 + string.Format("Crouch Input: {0}\n", CrouchInput)
+                + string.Format("WishDir: {0}\n", wishDir)
+                + string.Format("Time Scale: {0}\n", Time.timeScale)
+                + string.Format("Is Alive: {0}\n", IsAlive);
 
-        //    GUI.Label(rect, gui, guiSkin.label);
-        //}
+            GUI.Label(rect, gui, guiSkin.label);
+        }
 
         #endregion
 #endif

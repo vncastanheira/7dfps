@@ -23,7 +23,7 @@ MonoBehaviour:
   SlopeLimit: 0.2
   m_planesDotAngleThreshold: 0.7
   m_rotateSpeed: 8
-  m_groundDistance: 0.13
+  m_groundDistance: 0.15
   m_mass: 8
   m_drag: 0.1
   m_crouchingDrag: 0.01

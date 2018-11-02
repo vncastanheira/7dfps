@@ -1,6 +1,9 @@
 Library
 Temp
 Builds
+Lightmap*
+ReflectionProbe*
+LightingData*
 *.csproj
 /.vs/7dfps/v15
 /obj/Debug
